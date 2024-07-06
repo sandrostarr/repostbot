@@ -1,6 +1,8 @@
 # модуль для работы с базой данных
 import sqlite3 as sl
 import telebot
+# модуль работы со временем
+from datetime import datetime, timezone, timedelta
 
 # подключаемся к файлу с базой данных
 con = sl.connect('repostbot.db')
@@ -8,7 +10,7 @@ con = sl.connect('repostbot.db')
 # открываем файл
 with con:
     # получаем количество таблиц с нужным нам именем
-    data = con.execute("select count(*) from sqlite_master where type='table' and name='reports'")
+    data = con.execute("select count(*) from sqlite_master where type='table' and name='users'")
     for row in data:
         # если таких таблиц нет
         if row[0] == 0:
@@ -25,17 +27,25 @@ with con:
                 """)
 
 
-
-
 # bot = telebot.TeleBot("token")
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+def add_to_db():
+    # подключаемся к базе
+    con = sl.connect('repostbot.db')
+    # подготавливаем запрос
+    sql = 'INSERT INTO users (datetime, date, id, name, text) values(?, ?, ?, ?, ?)'
+    # получаем дату и время
+    now = datetime.now(timezone.utc)
+    # и просто дату
+    date = now.date()
+    # формируем данные для запроса
+    data = [
+        (str(now), str(date), str('1'), str('dwdawda'), str('adwwdwa wdad ad a'))
+    ]
+    # добавляем с помощью запроса данные
+    with con:
+        con.executemany(sql, data)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    add_to_db()
