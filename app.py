@@ -35,7 +35,7 @@ async def on_startup():
     if run_param:
         await drop_db()
     await create_db()
-    print(1101)
+
 
 
 async def on_shutdown():
