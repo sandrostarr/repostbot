@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import keyboard.reply as rkb
 import keyboard.inline as ikb
-from database.orm_query import orm_add_user, orm_get_user
+from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance
 from handlers.menu_process import get_menu_content
 
 user_private_router = Router()
@@ -47,7 +47,7 @@ async def faq_cmd(msg: Message):
     await msg.answer(text=answer)
 
 
-#начало работы с заработком монет за действия
+# начало работы с заработком монет за действия
 @user_private_router.message(F.text == "Заработать токенсы")
 async def earn_buy_tokens(msg: Message, session: AsyncSession):
     # answer = "Выбери задания которые по душе и выполняй их"
@@ -60,6 +60,8 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession):
     #                                                                   )
     #                  )
 
+    # TODO: по нажатию на кнопку "Заработать токенсы" на счёт падает 1 единица деняк. Проверить можно в профиле
+    await orm_top_up_user_balance(session=session, msg=msg, balance=1)
     answer, reply_markup = await get_menu_content(session, level=0, menu_name="TASKS")
     await msg.answer(text=answer, reply_markup=reply_markup)
 
@@ -120,4 +122,8 @@ async def func_1(call: CallbackQuery, callback_data: ikb.MenuCallback, session: 
 #                                      )
 #                                  )
 
-#
+
+@user_private_router.message(F.text == "Профиль")
+async def show_profile_data(msg: Message, session: AsyncSession):
+    user = await orm_get_user(session=session, msg=msg)
+    await msg.answer(text="У вас накоплено " + str(user.balance) + " деняк")

@@ -14,3 +14,4 @@ class User(Base):
     telegram_id: Mapped[int] = mapped_column(nullable=False)
     username: Mapped[str] = mapped_column(nullable=False)
     fid: Mapped[int] = mapped_column(nullable=True)
+    balance: Mapped[int] = mapped_column(nullable=True, default=0)
