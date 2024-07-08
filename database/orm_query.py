@@ -48,6 +48,14 @@ async def orm_get_user(session: AsyncSession, msg: Message):
     return result.scalar()
 
 
+async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance: int):
+    user = await orm_get_user(session=session, msg=msg)
+    query = update(User).where(User.telegram_id == msg.from_user.id).values(
+        balance=user.balance + balance)
+    await session.execute(query)
+    await session.commit()
+
+
 async def orm_get_data_from_db(session: AsyncSession, db_name: Type[object]):
     query = select(db_name)
     result = await session.execute(query)
