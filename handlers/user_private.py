@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import keyboard.reply as rkb
 import keyboard.inline as ikb
-from database.orm_query import orm_add_user_info
+from database.orm_query import orm_add_user, orm_get_user
 from handlers.menu_process import get_menu_content
 
 user_private_router = Router()
@@ -19,8 +19,12 @@ async def start_cmd(msg: Message, session: AsyncSession):
               "LFG!!!")
     await msg.delete()
     try:
-        await orm_add_user_info(session=session, msg=msg)
-        print('Данные добавлены')
+        user = await orm_get_user(session=session, msg=msg)
+        print('Уже зареган')
+        if user is None:
+            user = await orm_add_user(session=session, msg=msg)
+            print('Данные добавлены')
+        print('Пользователь ' + user.username + ' в здании')
     except:
         print('Не работает нихуя')
     await msg.answer(text=answer, reply_markup=rkb.create_kb("Заработать токенсы",
@@ -74,9 +78,6 @@ async def func_1(call: CallbackQuery, callback_data: ikb.MenuCallback, session: 
     )
     await call.message.edit_text(text=answer, reply_markup=reply_markup)
     await call.answer()
-
-
-
 
 #все что ниже пока закомитил, тренировался с функциями
 # #TODO: подшружать первый квест на LIKE действие и заменить переменные
