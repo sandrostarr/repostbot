@@ -11,7 +11,6 @@ from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv())
 
-
 from middlewares.db import DataBaseSession
 from handlers.user_private import user_private_router
 from assets.bot_cmd_list import private
@@ -35,7 +34,6 @@ async def on_startup():
     if run_param:
         await drop_db()
     await create_db()
-
 
 
 async def on_shutdown():

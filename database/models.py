@@ -7,8 +7,8 @@ class Base(DeclarativeBase):
     updated: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
 
-class UserInfo(Base):
-    __tablename__ = 'userinfo'
+class User(Base):
+    __tablename__ = 'user'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(nullable=False)
