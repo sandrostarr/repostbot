@@ -8,10 +8,20 @@ import keyboard.reply as rkb
 import keyboard.inline as ikb
 from utils.check_hex import is_hex_string
 from assets.FSMClass import addFID, createTask
-from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_get_data_from_db
+from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_update_user_fid
 from handlers.menu_process import get_menu_content
 
 user_private_router = Router()
+
+
+# TODO метод проверки на int. Можно будет потом вынести в отдельную библиотечку проектную, если ещё где-то потребуется
+def is_number(string):
+    try:
+        int(string)
+        return True
+    except ValueError:
+        return False
+
 
 ################################ USER COMMANDS ################################
 
@@ -57,11 +67,8 @@ async def faq_cmd(msg: Message, state: FSMContext):
 async def show_profile_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
     user = await orm_get_user(session=session, msg=msg)
-    name = user.username
-    if name is None:
-        name = user.id
 
-    answer = (f"Hola @{name}\n\n"
+    answer = (f"Hola {msg.from_user.full_name}\n\n"
               f"FID: {user.fid}\n\n"
               f"Баланс: {user.balance}")
 
@@ -82,22 +89,32 @@ async def get_fid_data(call: CallbackQuery, state: FSMContext):
     await call.message.edit_text(answer)
 
 
-#TODO: сделать проверки на int + сверка с DB + запись, попробовал исправить функцию не сработало
 @user_private_router.message(addFID.FID)
 async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
-
     fid = msg.text
-    await orm_add_user(session=session, msg=msg, fid=fid)
-    # TODO: сделать проверку с DB на наличие такого FID если FID есть то выдавать "FID уже зарегистрирован если считаете что это ошибка, свяжитесь с нами"
-    answer = (f"FID успешно добавлен")
-    await msg.answer(text=answer, reply_markup=rkb.create_kb("Заработать токенсы",
-                                                             "Заказать накрутку",
-                                                             "Профиль",
-                                                             "Мои заказы",
-                                                             placeholder="Жмяк кряк",
-                                                             sizes=(2, 1, 1)
-                                                             ))
+    if is_number(fid):
+        fid = int(fid)
+        if await orm_get_user(session=session, msg=msg, fid=fid) is not None:
+            answer = f"Такой FID уже зарегистрирован. Если считаете что это ошибка, свяжитесь с нами"
+        else:
+            await orm_update_user_fid(session=session, msg=msg, fid=fid)
+            answer = f"FID успешно добавлен"
+    else:
+        answer = f"Введите число, а не текст"
+
+    await msg.answer(
+        text=answer,
+        reply_markup=rkb.create_kb(
+            "Заработать токенсы",
+            "Заказать накрутку",
+            "Профиль",
+            "Мои заказы",
+            placeholder="Жмяк кряк",
+            sizes=(2, 1, 1)
+        )
+    )
     await state.clear()
+
 
 ################################### EARN TOKEN ################################
 #TODO: добавить проверку на FID чтоб обязательно заполняли его

@@ -7,7 +7,7 @@ from aiogram.types import Message
 from database.models import User
 
 
-#TODO: класс для пагинации и работы с БД взял с урока надо посчмотреть и может адаптировать
+# TODO: класс для пагинации и работы с БД взял с урока надо посчмотреть и может адаптировать
 class Paginator:
     def __init__(self, array: list | tuple, page: int = 1, per_page: int = 1):
         self.array = array
@@ -32,22 +32,32 @@ class Paginator:
         return False
 
 
-async def orm_add_user(session: AsyncSession, msg: Message, fid: int = None):
+async def orm_add_user(session: AsyncSession, msg: Message):
     obj = User(
         telegram_id=msg.from_user.id,
         username=msg.from_user.username,
-        fid=fid
     )
     session.add(obj)
     await session.commit()
     return await orm_get_user(session=session, msg=msg)
 
 
-async def orm_get_user(session: AsyncSession, msg: Message):
-    query = select(User).where(User.telegram_id == msg.from_user.id)
+# TODO потом отрефакторить метод
+async def orm_get_user(session: AsyncSession, msg: Message, fid: int = None):
+    if fid is not None:
+        query = select(User).where(User.fid == fid)
+    else:
+        query = select(User).where(User.telegram_id == msg.from_user.id)
     result = await session.execute(query)
     return result.scalar()
 
+
+# TODO в дальнейшем апдейт пользовательских данных можно будет собрать в один метод, сейчас пока похер
+async def orm_update_user_fid(session: AsyncSession, msg: Message, fid: int):
+    query = update(User).where(User.telegram_id == msg.from_user.id).values(
+        fid=fid)
+    await session.execute(query)
+    await session.commit()
 
 
 async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance: int):
@@ -56,15 +66,3 @@ async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance: 
         balance=user.balance + balance)
     await session.execute(query)
     await session.commit()
-
-
-async def orm_get_data_from_db(session: AsyncSession, db_name: Type[object]):
-    query = select(db_name)
-    result = await session.execute(query)
-    return result.scalar().all()
-
-
-async def orm_get_data_from_db(session: AsyncSession, db_name: Type[object], **filters):
-    query = select(db_name).filter_by(**filters)
-    result = await session.execute(query)
-    return result.scalar()
