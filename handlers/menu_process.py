@@ -5,7 +5,7 @@ from keyboard.inline import get_main_inline_kb, complete_task_kb
 
 
 # освное меню для заданий
-#TODO: заменить TASKTYPE на подгрузку данных из БД
+#TODO: заменить TASKTYPE на подгрузку данных из БД и настрость пагинацию
 async def task_menu(session, level, menu_name):
     answer = "Выбери задания которые по душе и выполняй их"
     task_type = {

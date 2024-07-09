@@ -65,6 +65,13 @@ def complete_task_kb(
                                                                  approve=False,
                                                                  ).pack()))
 
+    keyboard.add(InlineKeyboardButton(text='ЖАЛОБА',
+                                      callbacl_data=MenuEarnCallback(level=level,
+                                                                     task_type=task_type,
+                                                                     page=page,
+
+                                                                     ).pack()))
+
 
     keyboard.add(InlineKeyboardButton(text='НАЗАД',
                                       callbacl_data=MenuEarnCallback(level=level,
