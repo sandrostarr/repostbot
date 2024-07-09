@@ -4,7 +4,7 @@ from typing import Type
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.types import Message
-from database.models import User
+from database.models import User, Task
 
 
 # TODO: класс для пагинации и работы с БД взял с урока надо посчмотреть и может адаптировать
@@ -66,3 +66,9 @@ async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance: 
         balance=user.balance + balance)
     await session.execute(query)
     await session.commit()
+
+
+async def orm_get_tasks(session: AsyncSession, task_type: str):
+    query = select(Task).where(Task.type == task_type)
+    result = await session.execute(query)
+    return result.scalars().all()

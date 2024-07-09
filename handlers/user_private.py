@@ -8,7 +8,7 @@ import keyboard.reply as rkb
 import keyboard.inline as ikb
 from utils.check_hex import is_hex_string
 from assets.FSMClass import addFID, createTask
-from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_update_user_fid
+from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_update_user_fid, orm_get_tasks
 from handlers.menu_process import get_menu_content
 
 user_private_router = Router()
@@ -140,6 +140,11 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
 async def func_1(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
+
+    tasks = await orm_get_tasks(session=session, task_type='like')
+    for task in tasks:
+        print(str(task.id) + ' ' + str(task.price) + ' ' + task.url)
+
     answer, reply_markup = await get_menu_content(
         session,
         level=callback_data.level,
@@ -152,6 +157,7 @@ async def func_1(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, sessi
     )
     await call.message.edit_text(text=answer, reply_markup=reply_markup)
     await call.answer()
+
 
 ################################### CREATE TASK ################################
 @user_private_router.message(F.text == "Заказать накрутку")
