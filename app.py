@@ -17,7 +17,7 @@ from assets.bot_cmd_list import private
 from database.engine import create_db, drop_db, session_maker
 
 # Ограничение запросов для разгрузки скрипта
-ALLOWED_UPDATES = ["message", "edited_message"]
+ALLOWED_UPDATES = ["message", "edited_message", "callback_query"]
 
 bot = Bot(token=os.getenv('BOT_TOKEN'),
           default=DefaultBotProperties(

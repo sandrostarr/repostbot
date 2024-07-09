@@ -32,10 +32,11 @@ class Paginator:
         return False
 
 
-async def orm_add_user(session: AsyncSession, msg: Message):
+async def orm_add_user(session: AsyncSession, msg: Message, fid: int = None):
     obj = User(
         telegram_id=msg.from_user.id,
         username=msg.from_user.username,
+        fid=fid
     )
     session.add(obj)
     await session.commit()
@@ -46,6 +47,7 @@ async def orm_get_user(session: AsyncSession, msg: Message):
     query = select(User).where(User.telegram_id == msg.from_user.id)
     result = await session.execute(query)
     return result.scalar()
+
 
 
 async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance: int):
