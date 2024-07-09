@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import keyboard.reply as rkb
 import keyboard.inline as ikb
+from utils.check_hex import is_hex_string
 from assets.FSMClass import addFID, createTask
 from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_get_data_from_db
 from handlers.menu_process import get_menu_content
@@ -99,6 +100,7 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
 
 ################################### EARN TOKEN ################################
+#TODO: добавить проверку на FID чтоб обязательно заполняли его
 # начало работы с заработком монет за действия
 @user_private_router.message(F.text == "Заработать токенсы")
 async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext):
@@ -201,6 +203,7 @@ async def get_number_to_task(msg: Message, state: FSMContext):
                 await state.set_state(createTask.URL)
                 await msg.answer(text=answer)
 
+
 #TODO: делать запись в DB с заданием
 @user_private_router.message(createTask.URL)
 async def get_link_to_task(msg: Message, state: FSMContext):
@@ -209,16 +212,10 @@ async def get_link_to_task(msg: Message, state: FSMContext):
     url = msg.text
     if url.lower().startswith("https://warpcast.com/"):
         check_link = url[len("https://warpcast.com/"):]
-        print(f"check_link: {check_link}")
         slash_index = check_link.find("/")
-        print(f"slash_index: {slash_index}")
-        print(f"len(check_link): {len(check_link)}")
         if slash_index != -1:
             sub_text = check_link[slash_index + 1:]
-            print(f"subtext: -{sub_text}")
-            print(f"len: {len(sub_text)}")
-            if len(sub_text) == 10 and sub_text.startswith("0x") and task_type != "FOLLOW":
-                print("111111111111")
+            if len(sub_text) == 10 and is_hex_string(sub_text) and task_type != "FOLLOW":
                 answer = (f"Задание создано:\n\n"
                           f"Заказ: {task_type}\n"
                           f"Количество: {data['NUMBER']}\n"
@@ -226,11 +223,9 @@ async def get_link_to_task(msg: Message, state: FSMContext):
                 await state.clear()
                 await msg.answer(text=answer)
             else:
-                print("----------------")
                 await msg.answer(text="Некорректная ссылка")
         elif len(check_link) != 0:
             if task_type == "FOLLOW":
-                print("222222222222222222")
                 answer = (f"Задание создано:\n\n"
                           f"Заказ: {task_type}\n"
                           f"Количество: {data['NUMBER']}\n"
@@ -238,56 +233,11 @@ async def get_link_to_task(msg: Message, state: FSMContext):
                 await state.clear()
                 await msg.answer(text=answer)
             else:
-                print("+++++++++++++++++++")
                 await msg.answer(text="Некорректная ссылка")
         else:
-            print("+++++++++++++++++++")
             await msg.answer(text="Некорректная ссылка")
     else:
-        print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
         await msg.answer(text="Некорректная ссылка")
 
-
-
-#все что ниже пока закомитил, тренировался с функциями
-# #TODO: подшружать первый квест на LIKE действие и заменить переменные
-# @user_private_router.callback_query(F.data.startswith("TASK_"))
-# async def start_earn(call: CallbackQuery):
-#     answer = ''
-#     if call.data.endswith("LIKE"):
-#         answer = 'Лайки лайки лайки лайки'
-#     elif call.data.endswith("RECAST"):
-#         answer = 'рекаст рекаст рекаст'
-#     elif call.data.endswith("FOLLOW"):
-#         answer = 'подсвинота подписечники фоловинги'
-#     else:
-#         await call.answer('ШО ЗА???')
-#         return
-#     await call.message.edit_text(text=answer,
-#                                  reply_markup=ikb.create_mix_ikb(
-#                                      btns={"ПЕРЕЙТИ НА CAST": f'http://google.com',  #TODO:Заменить на ссылки с DB
-#                                            "ВЫПОЛНИЛ": f'DONE',
-#                                            #TODO:Заменить на ответ в BD о выполнение и дальнейше проверке
-#                                            "ПРОПУСТИТЬ": f'SKIP_TASK'},
-#                                      #TODO: можно делать отметку о пропуске либо просто оставить как замена на следующий таск
-#                                      sizes=(1, 1, 1)
-#                                      )
-#                                  )
-#
-#
-# # TODO:Заменить на ответ в BD о выполнение и дальнейше проверке
-# # заменяет клавиатуру прошлого выбора на клавиатуру после выполнения
-# @user_private_router.callback_query(F.data == 'DONE')
-# async def complete_task(call: CallbackQuery):
-#     print(call.data)
-#     answer = 'Like Like Like'
-#     await call.message.edit_text(text=answer,
-#                                  reply_markup=ikb.create_mix_ikb(
-#                                      btns={"ПЕРЕЙТИ НА CAST": f'http://google.com',  #TODO:Заменить на ссылки с DB
-#                                            "СЛЕДУЮЩЕЕ": f'SKIP_TASK'},
-#                                      #TODO: можно делать отметку о пропуске либо просто оставить как замена на следующий таск
-#                                      sizes=(1, 1)
-#                                      )
-#                                  )
 
 
