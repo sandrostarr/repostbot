@@ -1,10 +1,11 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class addFID(StatesGroup):
+class AddFid(StatesGroup):
     FID = State()
 
-class createTask(StatesGroup):
+
+class CreateTask(StatesGroup):
     TASK_TYPE = State()
-    NUMBER = State()
-    URL = State()
+    TASK_ACTIONS_AMOUNT = State()
+    TASK_URL = State()
