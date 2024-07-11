@@ -72,3 +72,15 @@ async def orm_get_tasks(session: AsyncSession, task_type: str):
     query = select(Task).where(Task.type == task_type)
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def orm_add_task(session: AsyncSession, user_id: int, task_type: str, url: str, price: int, actions_count: int):
+    obj = Task(
+        user_id=user_id,
+        type=task_type,
+        url=url,
+        price=price,
+        actions_count=actions_count,
+    )
+    session.add(obj)
+    await session.commit()
