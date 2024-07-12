@@ -31,8 +31,6 @@ def is_number(string):
 
 
 ################################ USER COMMANDS ################################
-
-#TODO: вынести в файл c обработчиками команд
 @user_private_router.message(CommandStart())
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
@@ -59,7 +57,6 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
                      )
 
 
-#TODO: вынести в файл c обработчиками команд
 @user_private_router.message(Command("faq"))
 async def faq_cmd(msg: Message, state: FSMContext):
     await state.clear()
@@ -126,44 +123,41 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
 
 ################################### EARN TOKEN ################################
 #TODO: добавить проверку на FID чтоб обязательно заполняли его
-# начало работы с заработком монет за действия
 @user_private_router.message(F.text == "Заработать токенсы")
 async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
-    # answer = "Выбери задания которые по душе и выполняй их"
-    # await msg.answer(text=answer,reply_markup=ikb.create_callback_ikb(btns={"LIKE" : "TASK_LIKE",
-    #                                                                         "RECAST": "TASK_RECAST",
-    #                                                                         "FOLLOW": "TASK_FOLLOW",
-    #                                                                         "КУПИТЬ ТОКЕНСЫ": "BUY_TOKENS"
-    #                                                                         },
-    #                                                                   sizes=(3,1,)
-    #                                                                   )
-    #                  )
 
     # TODO: по нажатию на кнопку "Заработать токенсы" на счёт падает 1 единица деняк. Проверить можно в профиле
     await orm_top_up_user_balance(session=session, msg=msg, balance=1)
-    answer, reply_markup = await get_menu_content(session, level=0, menu_name="TASKS")
+    answer, reply_markup = await get_menu_content(session, level=0)
     await msg.answer(text=answer, reply_markup=reply_markup)
 
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
-async def func_1(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
-    tasks = await orm_get_tasks(session=session, task_type='like')
-    for task in tasks:
-        print(str(task.id) + ' ' + str(task.price) + ' ' + task.url)
+async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
+    if callback_data.task_type != None:
+        tasks = await orm_get_tasks(session=session, task_type=callback_data.task_type)
+        for task in tasks:
+            print(str(task.id) + ' ' + str(task.price) + ' ' + task.url)
+    page = callback_data.page
+    task_data = tasks[page]
+    task_url = task_data.url
+    task_id = task_data.id
+
 
     answer, reply_markup = await get_menu_content(
         session,
         level=callback_data.level,
-        menu_name=callback_data.menu_name,
         task_type=callback_data.task_type,
-        task_id=callback_data.task_id,
+        task_id=task_id,
         page=callback_data.page,
+        url=task_url,
         approve=callback_data.approve,
 
     )
-    await call.message.edit_text(text=answer, reply_markup=reply_markup)
+    await call.message.edit_text(text=str(answer) + '' + str(page), reply_markup=reply_markup)
     await call.answer()
+    print(callback_data)
 
 
 ################################### CREATE TASK ################################
@@ -177,7 +171,7 @@ async def create_task(msg: Message, state: FSMContext):
                                                                 "RECAST": "TASK_RECAST",
                                                                 "FOLLOW": "TASK_FOLLOW",
 
-                     }, sizes=(3,)))
+                                                                }, sizes=(3,)))
 
 
 @user_private_router.callback_query(CreateTask.TASK_TYPE)
@@ -244,7 +238,6 @@ async def get_number_to_task(msg: Message, state: FSMContext):
                     await msg.answer(text=answer)
 
 
-# TODO: делать запись в DB с заданием
 @user_private_router.message(CreateTask.TASK_URL)
 async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSession):
     user = await orm_get_user(session=session, msg=msg)

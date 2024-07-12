@@ -1,68 +1,74 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import Paginator
-from keyboard.inline import get_main_inline_kb, complete_task_kb
+from database.orm_query import orm_get_tasks
+from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 
 
 # освное меню для заданий
-#TODO: заменить TASKTYPE на подгрузку данных из БД и настрость пагинацию
-async def task_menu(session, level, menu_name):
+async def task_menu(session, level):
     answer = "Выбери задания которые по душе и выполняй их"
-    task_type = {
-        "LIKE": "TASKS",
-        "RECAST": "TASKS",
-        "FOLLOW": "TASKS",
-    }
-    kb = get_main_inline_kb(level=level, task_type=task_type, sizes=(3,1))
+    kb = get_main_inline_kb(level=level, sizes=(3,1))
     return answer, kb
 
 
-#TODO: task_id сделать как ссылки так номера заданий сделать из БД запросы
+
 async def task_complete(
         session: AsyncSession,
         level: int,
         task_type: str,
-        page: int,
-        task_id: dict,
-        link: str,
+        task_id: str | None = None,
+        page: int = 1,
+        url: str | None = None,
         approve: bool = False,
 ):
-    task_id = {
-        231242, "google.com",
-        467823, "google.com",
-        200727, "google.com",
-        242873, "google.com",
-        119283, "google.com",
-    },
 
-    paginator = Paginator(task_id, page=page)
-    data = paginator.get_page()[0]
-
-    answer = (f"Преходи по ссылке и {data.name}"
-              f"{data.link}")
-
-    pagination_btns = pages(paginator)
+    answer = (f"Преходи по ссылке и {task_type}\n\n"
+              f"{url}")
+    if approve:
+        answer = (f"Давай Следующий")
+        #TODO: запись в БД
 
     kb = complete_task_kb(
         level=level,
         task_type=task_type,
         task_id=task_id,
+        page=page,
+        url=url,
+        approve=approve,
+        sizes=(1, )
     )
 
     return answer, kb
 
 
+#покупка токенов пока заглушка
+async def buy_token(
+        sessioon: AsyncSession,
+        level: int,
+):
+    answer = (f"Сорян пока нет такой возможности, но принимаем DONATION")
+    kb = buy_token_kb(
+        level = level
+    )
+
+    return answer, kb
+
+
+
+
 async def get_menu_content(
         session: AsyncSession,
         level: int,
-        menu_name: str,
         task_type: str | None = None,
+        task_id: str | None = None,
         page: int = 1,
-        task_id: dict | None = None,
+        url: str | None = None,
         approve: bool = False
 
 ):
     if level==0:
-        return await task_menu(session,level,menu_name)
+        return await task_menu(session,level)
     elif level==1:
-        return await task_complete(session,level,task_type,page,task_id,approve)
+        return await task_complete(session,level,task_type,task_id,page,url,approve)
+    elif level==7:
+        return await buy_token(session,level)
