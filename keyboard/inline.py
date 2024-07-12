@@ -8,7 +8,7 @@ class MenuEarnCallback(CallbackData, prefix="menu_earn"):
     level: int
     task_type: str | None = None
     task_id: int | None = None
-    page: int = 1
+    page: int = 0
     url: str | None = None
     approve: bool = False
 
@@ -91,7 +91,7 @@ def buy_token_kb(
                                                                                   task_type=task_type).pack()))
 
     return keyboard.adjust().as_markup()
-#все что нижу под снос
+
 # создать клавиатуру с callback_data
 def create_callback_ikb(
         *,

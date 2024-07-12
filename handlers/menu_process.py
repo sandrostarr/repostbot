@@ -17,7 +17,7 @@ async def task_complete(
         level: int,
         task_type: str,
         task_id: str | None = None,
-        page: int = 1,
+        page: int = 0,
         url: str | None = None,
         approve: bool = False,
 ):
@@ -61,7 +61,7 @@ async def get_menu_content(
         level: int,
         task_type: str | None = None,
         task_id: str | None = None,
-        page: int = 1,
+        page: int = 0,
         url: str | None = None,
         approve: bool = False
 

@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from sqlalchemy.ext.asyncio import AsyncSession
+from colorama import Fore
 
 import keyboard.reply as rkb
 import keyboard.inline as ikb
@@ -15,9 +16,9 @@ from handlers.menu_process import get_menu_content
 user_private_router = Router()
 
 ActionsPrices = {
-    'TASK_LIKE': 2,
-    'TASK_RECAST': 4,
-    'TASK_FOLLOW': 6,
+    'LIKE': 2,
+    'RECAST': 4,
+    'FOLLOW': 6,
 }
 
 
@@ -135,27 +136,31 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
 async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
-    if callback_data.task_type != None:
+    if callback_data.task_type is not None:
         tasks = await orm_get_tasks(session=session, task_type=callback_data.task_type)
         for task in tasks:
-            print(str(task.id) + ' ' + str(task.price) + ' ' + task.url)
+            print(Fore.WHITE + str(task.id) + ' ' + str(task.price) + ' ' + task.url)
+
     page = callback_data.page
-    task_data = tasks[page]
+    if page >= len(tasks):
+        task_data = tasks[0]
+        page = 0
+    else:
+        task_data = tasks[page]
     task_url = task_data.url
     task_id = task_data.id
-
-
     answer, reply_markup = await get_menu_content(
         session,
         level=callback_data.level,
         task_type=callback_data.task_type,
         task_id=task_id,
-        page=callback_data.page,
-        url=task_url,
+        page=page,
+        url=f"https://warpcast.com/"+task_url,
         approve=callback_data.approve,
 
     )
-    await call.message.edit_text(text=str(answer) + '' + str(page), reply_markup=reply_markup)
+
+    await call.message.edit_text(text=str(answer), reply_markup=reply_markup)
     await call.answer()
     print(callback_data)
 
@@ -167,9 +172,9 @@ async def create_task(msg: Message, state: FSMContext):
     await state.set_state(CreateTask.TASK_TYPE)
     answer = f"Выбери что будем накручивать?"
     await msg.answer(answer,
-                     reply_markup=ikb.create_callback_ikb(btns={"LIKE": "TASK_LIKE",
-                                                                "RECAST": "TASK_RECAST",
-                                                                "FOLLOW": "TASK_FOLLOW",
+                     reply_markup=ikb.create_callback_ikb(btns={"LIKE": "LIKE",
+                                                                "RECAST": "RECAST",
+                                                                "FOLLOW": "FOLLOW",
 
                                                                 }, sizes=(3,)))
 
@@ -179,17 +184,17 @@ async def get_type_of_task(call: CallbackQuery, state: FSMContext):
     answer = ''
     action_price = ActionsPrices[call.data]
     await state.update_data(TASK_PRICE=action_price)
-    if call.data == "TASK_LIKE":
+    if call.data == "LIKE":
         answer = (f"Сколько лайков нужно накрутить?\n\n"
                   f"Стоимость одного лайка = {action_price} токенам\n\n"
                   f"<i>*в бета тесте нельзя заказать более 20 лайков за 1 заказ</i>")
         await state.update_data(TASK_TYPE="LIKE")
-    if call.data == "TASK_RECAST":
+    if call.data == "RECAST":
         answer = (f"Сколько рекастов нужно сделать?\n\n"
                   f"Стоимость одного рекаста = {action_price} токенам\n\n"
                   f"<i>*в бета тесте нельзя заказать более 20 рекастов за 1 заказ</i>")
         await state.update_data(TASK_TYPE="RECAST")
-    if call.data == "TASK_FOLLOW":
+    if call.data == "FOLLOW":
         answer = (f"Сколько подписчиков нужно сделать?\n\n"
                   f"Стоимость одного подписчика = {action_price} токенам\n\n"
                   f"<i>*в бета тесте нельзя заказать более 50 подписчиков за 1 заказ</i>")
@@ -201,41 +206,46 @@ async def get_type_of_task(call: CallbackQuery, state: FSMContext):
 
 #TODO: в бета сделаем ограничение на заказы, чтоб не было типов с заказми по 1000000000 из-за ошибок
 @user_private_router.message(CreateTask.TASK_ACTIONS_AMOUNT)
-async def get_number_to_task(msg: Message, state: FSMContext):
+async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
+    user = await orm_get_user(session=session, msg=msg)
     task_type = data['TASK_TYPE']
     actions_amount = msg.text
-    if not is_number(actions_amount):
-        await msg.answer(text="Введите корректное число")
-    else:
-        actions_amount = int(actions_amount)
-        task_price = actions_amount * data['TASK_PRICE']
-        await state.update_data(TASK_PRICE=task_price)
-        if actions_amount <= 0:
-            await msg.answer(text="Введите число больше 0")
-        else:
-            if task_type == "FOLLOW":
-                if actions_amount >= 50:
-                    await msg.answer(text="Введите число меньше 50")
-                else:
-                    task_link = "профиль"
-                    answer = (f"Отправьте ссылку на {task_link}\n"
-                              f"Стоимость услуги составит {task_price} токена\n"
-                              f"Пример:<i> https://warpcast.com/vitalik.eth </i>")
-                    await state.update_data(ACTIONS_AMOUNT=actions_amount)
-                    await state.set_state(CreateTask.TASK_URL)
-                    await msg.answer(text=answer)
+    if is_number(actions_amount):
+        if user.balance >= int(actions_amount) * ActionsPrices[task_type]:
+            actions_amount = int(actions_amount)
+            task_price = actions_amount * data['TASK_PRICE']
+            await state.update_data(TASK_PRICE=task_price)
+            if actions_amount <= 0:
+                await msg.answer(text="Введите число больше 0")
             else:
-                if actions_amount >= 20 or actions_amount <= 0:
-                    await msg.answer(text="Введите число меньше 20")
+                if task_type == "FOLLOW":
+                    if actions_amount >= 50:
+                        await msg.answer(text="Введите число меньше 50")
+                    else:
+                        task_link = "профиль"
+                        answer = (f"Отправьте ссылку на {task_link}\n"
+                                  f"Стоимость услуги составит {task_price} токена\n"
+                                  f"Пример:<i> https://warpcast.com/vitalik.eth </i>")
+                        await state.update_data(ACTIONS_AMOUNT=actions_amount)
+                        await state.set_state(CreateTask.TASK_URL)
+                        await msg.answer(text=answer)
                 else:
-                    task_link = "пост"
-                    answer = (f"Отправьте ссылку на {task_link}\n"
-                              f"Стоимость услуги составит {task_price} токена\n"
-                              f"Пример: <i> https://warpcast.com/vitalik.eth/0xf2fb9ef7 </i>")
-                    await state.update_data(ACTIONS_AMOUNT=actions_amount)
-                    await state.set_state(CreateTask.TASK_URL)
-                    await msg.answer(text=answer)
+                    if actions_amount >= 20 or actions_amount <= 0:
+                        await msg.answer(text="Введите число меньше 20")
+                    else:
+                        task_link = "пост"
+                        answer = (f"Отправьте ссылку на {task_link}\n"
+                                  f"Стоимость услуги составит {task_price} токена\n"
+                                  f"Пример: <i> https://warpcast.com/vitalik.eth/0xf2fb9ef7 </i>")
+                        await state.update_data(ACTIONS_AMOUNT=actions_amount)
+                        await state.set_state(CreateTask.TASK_URL)
+                        await msg.answer(text=answer)
+        else:
+            await msg.answer(text="Недостаточно средств")
+    else:
+        await msg.answer(text="Введите корректное число")
+
 
 
 @user_private_router.message(CreateTask.TASK_URL)
@@ -257,7 +267,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                     session=session,
                     user_id=user.id,
                     task_type=task_type,
-                    url=task_url,
+                    url=task_url.replace("https://warpcast.com/", ""),
                     price=task_price,
                     actions_count=actions_amount,
                 )
