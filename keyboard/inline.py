@@ -66,18 +66,11 @@ def complete_task_kb(
                                                                      approve=False,
                                                                      ).pack()))
 
-    keyboard.add(InlineKeyboardButton(text='ЖАЛОБА',
-                                      callback_data=MenuEarnCallback(level=6,
-                                                                     task_type=task_type,
-                                                                     task_id=task_id,
-                                                                     ).pack()))
-
     keyboard.add(InlineKeyboardButton(text='НАЗАД',
                                       callback_data=MenuEarnCallback(level=0,
                                                                      task_type=task_type).pack()))
 
     return keyboard.adjust(*sizes).as_markup()
-
 
 
 def buy_token_kb(
@@ -87,10 +80,11 @@ def buy_token_kb(
 ):
     keyboard = InlineKeyboardBuilder()
 
-    keyboard.add(InlineKeyboardButton(text='НАЗАД',callback_data=MenuEarnCallback(level=0,
-                                                                                  task_type=task_type).pack()))
+    keyboard.add(InlineKeyboardButton(text='НАЗАД', callback_data=MenuEarnCallback(level=0,
+                                                                                   task_type=task_type).pack()))
 
     return keyboard.adjust().as_markup()
+
 
 # создать клавиатуру с callback_data
 def create_callback_ikb(

@@ -62,7 +62,7 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
 async def faq_cmd(msg: Message, state: FSMContext):
     await state.clear()
     #TODO: написать мини промт как работает наш сервис
-    answer = (f'Ну типо вопрос ответ для всякой хуиты')
+    answer = (f'Ну типо вопрос ответ для всякой хуиты и контакт разработчиков')
     await msg.delete()
     await msg.answer(text=answer)
 
@@ -127,11 +127,15 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
 @user_private_router.message(F.text == "Заработать токенсы")
 async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
+    user = await orm_get_user(session=session, msg=msg)
+    if user.fid is not None:
+        await orm_top_up_user_balance(session=session, msg=msg, balance=1)
+        answer, reply_markup = await get_menu_content(session, level=0)
+        await msg.answer(text=answer, reply_markup=reply_markup)
+    else:
+        await msg.answer(text="Сначала укажи стой FID в Profile")
 
-    # TODO: по нажатию на кнопку "Заработать токенсы" на счёт падает 1 единица деняк. Проверить можно в профиле
-    await orm_top_up_user_balance(session=session, msg=msg, balance=1)
-    answer, reply_markup = await get_menu_content(session, level=0)
-    await msg.answer(text=answer, reply_markup=reply_markup)
+
 
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
@@ -155,7 +159,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         task_type=callback_data.task_type,
         task_id=task_id,
         page=page,
-        url=f"https://warpcast.com/"+task_url,
+        url=f"https://warpcast.com/" + task_url,
         approve=callback_data.approve,
 
     )
@@ -204,7 +208,6 @@ async def get_type_of_task(call: CallbackQuery, state: FSMContext):
     await call.message.edit_text(text=answer)
 
 
-#TODO: в бета сделаем ограничение на заказы, чтоб не было типов с заказми по 1000000000 из-за ошибок
 @user_private_router.message(CreateTask.TASK_ACTIONS_AMOUNT)
 async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
@@ -245,7 +248,6 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
             await msg.answer(text="Недостаточно средств")
     else:
         await msg.answer(text="Введите корректное число")
-
 
 
 @user_private_router.message(CreateTask.TASK_URL)
