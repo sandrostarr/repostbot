@@ -35,10 +35,18 @@ async def orm_update_user_fid(session: AsyncSession, msg: Message, fid: int):
     await session.commit()
 
 
-async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance: int):
+async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance_change: int):
     user = await orm_get_user(session=session, msg=msg)
     query = update(User).where(User.telegram_id == msg.from_user.id).values(
-        balance=user.balance + balance)
+        balance=user.balance + balance_change)
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balance_change: int):
+    user = await orm_get_user(session=session, msg=msg)
+    query = update(User).where(User.telegram_id == msg.from_user.id).values(
+        balance=user.balance - balance_change)
     await session.execute(query)
     await session.commit()
 

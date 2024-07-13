@@ -7,10 +7,9 @@ from colorama import Fore
 
 import keyboard.reply as rkb
 import keyboard.inline as ikb
+import database.orm_query as q
 from utils.check_hex import is_hex_string
 from assets.FSMClass import AddFid, CreateTask
-from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_update_user_fid, orm_get_tasks, \
-    orm_add_task
 from handlers.menu_process import get_menu_content
 
 user_private_router = Router()
@@ -31,7 +30,7 @@ def is_number(string):
         return False
 
 
-################################ USER COMMANDS ################################
+# ############################### USER COMMANDS ################################
 @user_private_router.message(CommandStart())
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
@@ -40,10 +39,10 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
               "LFG!!!")
     await msg.delete()
     try:
-        user = await orm_get_user(session=session, msg=msg)
+        user = await q.orm_get_user(session=session, msg=msg)
         print('Уже зареган')
         if user is None:
-            user = await orm_add_user(session=session, msg=msg)
+            user = await q.orm_add_user(session=session, msg=msg)
             print('Данные добавлены')
         print('Пользователь ' + user.username + ' в здании')
     except:
@@ -61,18 +60,18 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
 @user_private_router.message(Command("faq"))
 async def faq_cmd(msg: Message, state: FSMContext):
     await state.clear()
-    #TODO: написать мини промт как работает наш сервис
-    answer = (f'Ну типо вопрос ответ для всякой хуиты и контакт разработчиков')
+    # TODO: написать мини промт как работает наш сервис
+    answer = f'Ну типо вопрос ответ для всякой хуиты и контакт разработчиков'
     await msg.delete()
     await msg.answer(text=answer)
 
 
-################################### PROFILE ###################################
-#Профиль добавил кнопку Добавить FID если он отсутствует + добавление
+# ################################## PROFILE ###################################
+# Профиль добавил кнопку Добавить FID если он отсутствует + добавление
 @user_private_router.message(F.text == "Профиль")
 async def show_profile_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
-    user = await orm_get_user(session=session, msg=msg)
+    user = await q.orm_get_user(session=session, msg=msg)
 
     answer = (f"Hola {msg.from_user.full_name}\n\n"
               f"FID: {user.fid}\n\n"
@@ -100,10 +99,10 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
     fid = msg.text
     if is_number(fid):
         fid = int(fid)
-        if await orm_get_user(session=session, msg=msg, fid=fid) is not None:
+        if await q.orm_get_user(session=session, msg=msg, fid=fid) is not None:
             answer = f"Такой FID уже зарегистрирован. Если считаете что это ошибка, свяжитесь с нами"
         else:
-            await orm_update_user_fid(session=session, msg=msg, fid=fid)
+            await q.orm_update_user_fid(session=session, msg=msg, fid=fid)
             answer = f"FID успешно добавлен"
     else:
         answer = f"Введите число, а не текст"
@@ -122,26 +121,23 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
 
 
-################################### EARN TOKEN ################################
-#TODO: добавить проверку на FID чтоб обязательно заполняли его
+# ################################## EARN TOKEN ################################
 @user_private_router.message(F.text == "Заработать токенсы")
 async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
-    user = await orm_get_user(session=session, msg=msg)
+    user = await q.orm_get_user(session=session, msg=msg)
     if user.fid is not None:
-        await orm_top_up_user_balance(session=session, msg=msg, balance=1)
+        await q.orm_top_up_user_balance(session=session, msg=msg, balance_change=1)
         answer, reply_markup = await get_menu_content(session, level=0)
         await msg.answer(text=answer, reply_markup=reply_markup)
     else:
-        await msg.answer(text="Сначала укажи стой FID в Profile")
-
-
+        await msg.answer(text="Сначала укажи свой FID в разделе «Профиль»")
 
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
 async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
     if callback_data.task_type is not None:
-        tasks = await orm_get_tasks(session=session, task_type=callback_data.task_type)
+        tasks = await q.orm_get_tasks(session=session, task_type=callback_data.task_type)
         for task in tasks:
             print(Fore.WHITE + str(task.id) + ' ' + str(task.price) + ' ' + task.url)
 
@@ -169,7 +165,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
     print(callback_data)
 
 
-################################### CREATE TASK ################################
+# ################################## CREATE TASK ################################
 @user_private_router.message(F.text == "Заказать накрутку")
 async def create_task(msg: Message, state: FSMContext):
     await state.clear()
@@ -211,7 +207,7 @@ async def get_type_of_task(call: CallbackQuery, state: FSMContext):
 @user_private_router.message(CreateTask.TASK_ACTIONS_AMOUNT)
 async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSession):
     data = await state.get_data()
-    user = await orm_get_user(session=session, msg=msg)
+    user = await q.orm_get_user(session=session, msg=msg)
     task_type = data['TASK_TYPE']
     actions_amount = msg.text
     if is_number(actions_amount):
@@ -252,7 +248,7 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
 
 @user_private_router.message(CreateTask.TASK_URL)
 async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSession):
-    user = await orm_get_user(session=session, msg=msg)
+    user = await q.orm_get_user(session=session, msg=msg)
     data = await state.get_data()
     task_type = data['TASK_TYPE']
     actions_amount = data['ACTIONS_AMOUNT']
@@ -265,7 +261,8 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
             sub_text = check_link[slash_index + 1:]
             if len(sub_text) == 10 and is_hex_string(sub_text) and task_type != "FOLLOW":
 
-                await orm_add_task(
+                await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
+                await q.orm_add_task(
                     session=session,
                     user_id=user.id,
                     task_type=task_type,
@@ -286,7 +283,8 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
         elif len(check_link) != 0:
             if task_type == "FOLLOW":
 
-                await orm_add_task(
+                await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
+                await q.orm_add_task(
                     session=session,
                     user_id=user.id,
                     task_type=task_type,
