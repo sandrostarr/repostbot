@@ -11,23 +11,9 @@ import database.orm_query as q
 from utils.check_hex import is_hex_string
 from assets.FSMClass import AddFid, CreateTask
 from handlers.menu_process import get_menu_content
+from utils.functions import is_number, get_action_price
 
 user_private_router = Router()
-
-ActionsPrices = {
-    'LIKE': 2,
-    'RECAST': 4,
-    'FOLLOW': 6,
-}
-
-
-# TODO метод проверки на int. Можно будет потом вынести в отдельную библиотечку проектную, если ещё где-то потребуется
-def is_number(string):
-    try:
-        int(string)
-        return True
-    except ValueError:
-        return False
 
 
 # ############################### USER COMMANDS ################################
@@ -67,7 +53,7 @@ async def faq_cmd(msg: Message, state: FSMContext):
 
 
 # ################################## PROFILE ###################################
-# Профиль добавил кнопку Добавить FID если он отсутствует + добавление
+
 @user_private_router.message(F.text == "Профиль")
 async def show_profile_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
@@ -127,7 +113,6 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext
     await state.clear()
     user = await q.orm_get_user(session=session, msg=msg)
     if user.fid is not None:
-        await q.orm_top_up_user_balance(session=session, msg=msg, balance_change=1)
         answer, reply_markup = await get_menu_content(session, level=0)
         await msg.answer(text=answer, reply_markup=reply_markup)
     else:
@@ -136,6 +121,7 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
 async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
+    user = await q.orm_get_user_by_tg_id(session=session, telegram_id=call.from_user.id)
     if callback_data.task_type is not None:
         tasks = await q.orm_get_tasks(session=session, task_type=callback_data.task_type)
         for task in tasks:
@@ -154,10 +140,10 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         level=callback_data.level,
         task_type=callback_data.task_type,
         task_id=task_id,
+        user_id=user.id,
         page=page,
         url=f"https://warpcast.com/" + task_url,
         approve=callback_data.approve,
-
     )
 
     await call.message.edit_text(text=str(answer), reply_markup=reply_markup)
@@ -170,7 +156,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
 async def create_task(msg: Message, state: FSMContext):
     await state.clear()
     await state.set_state(CreateTask.TASK_TYPE)
-    answer = f"Выбери что будем накручивать?"
+    answer = f"Выбери, что будем накручивать?"
     await msg.answer(answer,
                      reply_markup=ikb.create_callback_ikb(btns={"LIKE": "LIKE",
                                                                 "RECAST": "RECAST",
@@ -182,7 +168,7 @@ async def create_task(msg: Message, state: FSMContext):
 @user_private_router.callback_query(CreateTask.TASK_TYPE)
 async def get_type_of_task(call: CallbackQuery, state: FSMContext):
     answer = ''
-    action_price = ActionsPrices[call.data]
+    action_price = get_action_price(call.data)
     await state.update_data(TASK_PRICE=action_price)
     if call.data == "LIKE":
         answer = (f"Сколько лайков нужно накрутить?\n\n"
@@ -211,7 +197,7 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
     task_type = data['TASK_TYPE']
     actions_amount = msg.text
     if is_number(actions_amount):
-        if user.balance >= int(actions_amount) * ActionsPrices[task_type]:
+        if user.balance >= int(actions_amount) * get_action_price(task_type):
             actions_amount = int(actions_amount)
             task_price = actions_amount * data['TASK_PRICE']
             await state.update_data(TASK_PRICE=task_price)
