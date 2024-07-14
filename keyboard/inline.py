@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-#обработка callback и создание меню
+# обработка callback и создание меню
 class MenuEarnCallback(CallbackData, prefix="menu_earn"):
     level: int
     task_type: str | None = None
@@ -13,7 +13,7 @@ class MenuEarnCallback(CallbackData, prefix="menu_earn"):
     approve: bool = False
 
 
-#меню при нажатии на кнопку заработать
+# меню при нажатии на кнопку заработать
 def get_main_inline_kb(
         *,
         level: int,
@@ -37,12 +37,12 @@ def get_main_inline_kb(
     return keyboard.adjust(*sizes).as_markup()
 
 
-#меню для выполнения заданий после выбора типа заданий
+# меню для выполнения заданий после выбора типа заданий
 def complete_task_kb(
         *,
         level: int,
         task_type: str,
-        task_id: str,
+        task_id: int,
         page: int,
         url: str,
         sizes: tuple[int] = (1,),
@@ -56,6 +56,7 @@ def complete_task_kb(
         keyboard.add(InlineKeyboardButton(text="ВЫПОЛНИЛ",
                                           callback_data=MenuEarnCallback(level=level,
                                                                          task_type=task_type,
+                                                                         page=page,
                                                                          task_id=task_id,
                                                                          approve=True).pack()))
 
