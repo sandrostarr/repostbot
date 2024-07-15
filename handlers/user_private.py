@@ -10,13 +10,31 @@ import keyboard.inline as ikb
 import database.orm_query as q
 from utils.check_hex import is_hex_string
 from assets.FSMClass import AddFid, CreateTask
+from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_update_user_fid, orm_get_tasks, \
+    orm_add_task
 from handlers.menu_process import get_menu_content
 from utils.functions import is_number, get_action_price
+from warpcast import api
 
 user_private_router = Router()
 
+ActionsPrices = {
+    'LIKE': 2,
+    'RECAST': 4,
+    'FOLLOW': 6,
+}
 
-# ############################### USER COMMANDS ################################
+
+# TODO метод проверки на int. Можно будет потом вынести в отдельную библиотечку проектную, если ещё где-то потребуется
+def is_number(string):
+    try:
+        int(string)
+        return True
+    except ValueError:
+        return False
+
+
+################################ USER COMMANDS ################################
 @user_private_router.message(CommandStart())
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
@@ -45,17 +63,36 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
 
 @user_private_router.message(Command("faq"))
 async def faq_cmd(msg: Message, state: FSMContext):
-    await state.clear()
-    # TODO: написать мини промт как работает наш сервис
-    answer = f'Ну типо вопрос ответ для всякой хуиты и контакт разработчиков'
     await msg.delete()
+    await state.clear()
+    answer = (f"F.A.Q.\n\n"
+              f"1. Выполняй задания и зарабатывай токены. После чего можешь заказать продвижение своего аккаунта.\n\n"
+              f"2. Стоимость заданий:\n"
+              f" ________________________________ \n"
+              f" | Задание | Выполнение | Заказ | \n"
+              f" |   Like  |     1      |   2   | \n"
+              f" |  Recast |     2      |   4   | \n"
+              f" |  Follow |     3      |   6   | \n"
+              f" -------------------------------- \n\n"
+              f"3. Время за которое начисляются токены (мин):\n"
+              f" _______________________ \n"
+              f" | Задание |   Время   | \n"
+              f" |   Like  |    1 min  | \n"
+              f" |  Recast |    2 min  | \n"
+              f" |  Follow |    3 min  | \n"
+              f" ----------------------- \n\n"
+              f"4. В случае если вы выполнили задание и в течении 72 часов отменили его, вводится система штрафов.\n\n"
+              f"5. Нажав кнопку выполнил, но не выполнили задание, не будут начислены токены, штрафы не предусмотрены.\n\n"
+              f"6. Остались вопросы? Пишите на гос услуги @username \n\n"
+              )
     await msg.answer(text=answer)
 
 
-# ################################## PROFILE ###################################
-
+################################### PROFILE ###################################
+#Профиль добавил кнопку Добавить FID если он отсутствует + добавление
 @user_private_router.message(F.text == "Профиль")
 async def show_profile_data(msg: Message, session: AsyncSession, state: FSMContext):
+    await msg.delete()
     await state.clear()
     user = await q.orm_get_user(session=session, msg=msg)
 
@@ -107,16 +144,19 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
 
 
-# ################################## EARN TOKEN ################################
-@user_private_router.message(F.text == "Заработать токенсы")
+################################### EARN TOKEN ################################
+@user_private_router.message(F.text == "Заработать токены")
 async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
     user = await q.orm_get_user(session=session, msg=msg)
     if user.fid is not None:
+        await orm_top_up_user_balance(session=session, msg=msg, balance=1)
         answer, reply_markup = await get_menu_content(session, level=0)
         await msg.answer(text=answer, reply_markup=reply_markup)
     else:
-        await msg.answer(text="Сначала укажи свой FID в разделе «Профиль»")
+        await msg.answer(text="Сначала укажи стой FID в Profile")
+
+
 
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
@@ -127,31 +167,58 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         for task in tasks:
             print(Fore.WHITE + str(task.id) + ' ' + str(task.price) + ' ' + task.url)
 
-    page = callback_data.page
-    if page >= len(tasks):
-        task_data = tasks[0]
-        page = 0
+        page = callback_data.page
+        if page >= len(tasks):
+            task_data = tasks[0]
+            page = 0
+        else:
+            task_data = tasks[page]
+        task_url = task_data.url
+        task_id = task_data.id
+        answer, reply_markup = await get_menu_content(
+            session,
+            level=callback_data.level,
+            task_type=callback_data.task_type,
+            task_id=task_id,
+            user_id=user.id,
+            page=page,
+            url=f"https://warpcast.com/" + task_url,
+            approve=callback_data.approve,
+        )
+
+        await call.message.edit_text(text=str(answer), reply_markup=reply_markup)
+        await call.answer()
     else:
-        task_data = tasks[page]
-    task_url = task_data.url
-    task_id = task_data.id
-    answer, reply_markup = await get_menu_content(
-        session,
-        level=callback_data.level,
-        task_type=callback_data.task_type,
-        task_id=task_id,
-        user_id=user.id,
-        page=page,
-        url=f"https://warpcast.com/" + task_url,
-        approve=callback_data.approve,
-    )
-
-    await call.message.edit_text(text=str(answer), reply_markup=reply_markup)
-    await call.answer()
-    print(callback_data)
+        answer = " Похожу что ты выполнил все задания. Выбери другую категорию."
+        await call.message.edit_text(text=answer,
+                                     reply_markup=await get_menu_content(session, level=0))
+        await call.answer()
 
 
-# ################################## CREATE TASK ################################
+#TODO: вытащить в отдельный файл
+def check_cast_from_user(casts, startHash):
+
+    for value in casts:
+            if value.startswith(startHash):
+                return True
+
+    return False
+
+def get_username_from_url(url):
+    username = url.rsplit('/', 1)[0]
+    return username
+
+
+
+def get_hash_from_url(url):
+    cast_hash = url.rsplit('/', 1)[-1]
+    return cast_hash
+
+
+
+
+
+################################### CREATE TASK ################################
 @user_private_router.message(F.text == "Заказать накрутку")
 async def create_task(msg: Message, state: FSMContext):
     await state.clear()
@@ -172,17 +239,17 @@ async def get_type_of_task(call: CallbackQuery, state: FSMContext):
     await state.update_data(TASK_PRICE=action_price)
     if call.data == "LIKE":
         answer = (f"Сколько лайков нужно накрутить?\n\n"
-                  f"Стоимость одного лайка = {action_price} токенам\n\n"
+                  f"Стоимость одного лайка = {action_price} токена\n\n"
                   f"<i>*в бета тесте нельзя заказать более 20 лайков за 1 заказ</i>")
         await state.update_data(TASK_TYPE="LIKE")
     if call.data == "RECAST":
         answer = (f"Сколько рекастов нужно сделать?\n\n"
-                  f"Стоимость одного рекаста = {action_price} токенам\n\n"
+                  f"Стоимость одного рекаста = {action_price} токена\n\n"
                   f"<i>*в бета тесте нельзя заказать более 20 рекастов за 1 заказ</i>")
         await state.update_data(TASK_TYPE="RECAST")
     if call.data == "FOLLOW":
         answer = (f"Сколько подписчиков нужно сделать?\n\n"
-                  f"Стоимость одного подписчика = {action_price} токенам\n\n"
+                  f"Стоимость одного подписчика = {action_price} токенов\n\n"
                   f"<i>*в бета тесте нельзя заказать более 50 подписчиков за 1 заказ</i>")
         await state.update_data(TASK_TYPE="FOLLOW")
 
