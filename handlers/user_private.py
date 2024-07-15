@@ -50,7 +50,7 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
         print('Пользователь ' + user.username + ' в здании')
     except:
         print('Не работает нихуя')
-    await msg.answer(text=answer, reply_markup=rkb.create_kb("Заработать токенсы",
+    await msg.answer(text=answer, reply_markup=rkb.create_kb("Заработать токены",
                                                              "Заказать накрутку",
                                                              "Профиль",
                                                              "Мои заказы",
@@ -132,7 +132,7 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
     await msg.answer(
         text=answer,
         reply_markup=rkb.create_kb(
-            "Заработать токенсы",
+            "Заработать токены",
             "Заказать накрутку",
             "Профиль",
             "Мои заказы",
@@ -196,7 +196,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
 def check_cast_from_user(casts, startHash):
     for value in casts:
         if value.startswith(startHash):
-            return True
+            return True, value
     return False
 
 
@@ -307,8 +307,9 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
             if len(sub_text) == 10 and is_hex_string(sub_text) and task_type != "FOLLOW":
                 username = get_username_from_url(check_link)
                 cast_list = api.get_casts_from_user(username)
-                res = check_cast_from_user(cast_list, sub_text)
-                if res:
+                cast_hash = check_cast_from_user(cast_list, sub_text)
+                print(cast_hash)
+                if cast_hash:
                     await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                     await q.orm_add_task(
                         session=session,

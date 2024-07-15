@@ -3,13 +3,14 @@ from requests.exceptions import Timeout, ConnectionError
 
 warp_api = "https://client.warpcast.com/v2/"
 
+
 def get_fid_from_username(
         username: str,
 
 ):
     param = f"user-by-username?username={username}"
     try:
-        response = requests.get(warp_api+param)
+        response = requests.get(warp_api + param)
         fid = response.json()['result']['user']['fid']
 
         return fid
@@ -24,29 +25,53 @@ def get_casts_from_user(
         fid = get_fid_from_username(username=username)
         param = f"profile-casts?fid={fid}"
 
-        response = requests.get(warp_api+param)
+        response = requests.get(warp_api + param)
 
         hash_list = [cast['hash'] for cast in response.json()['result']['casts']]
-        print(hash_list)
         return hash_list
     except:
         return None
 
 
+def get_followers(
+        username: str,
+):
+    fid = get_fid_from_username(username)
+    param = f"followers?fid={fid}"
+    try:
+        response = requests.get(warp_api + param)
+        followers = response.json()
+
+        return followers
+    except:
+        return None
 
 
-def get_followers():
-    pass
+def get_cast_likers(
+        cast_hash: str,
+):
+    param = f"cast-likes?castHash={cast_hash}"
+    try:
+        response = requests.get(warp_api + param)
+        likers = response.json()
+        likers_fids = [like['reactor']['fid'] for like in likers['result']['likes']]
+        return likers_fids
+    except:
+        return None
 
 
-def get_cast_likers():
-    pass
+def get_recasters(
+        cast_hash: str,
+):
+    param = f"cast-recasters?castHash={cast_hash}"
+    try:
+        response = requests.get(warp_api + param)
+        recasters = response.json()
+
+        recasters_fids = [user['fid'] for user in recasters['result']['users']]
+        return recasters_fids
+    except:
+        return None
 
 
-def get_recasters():
-    pass
 
-
-
-
-get_casts_from_user("kokos-crypto")
