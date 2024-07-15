@@ -10,8 +10,7 @@ import keyboard.inline as ikb
 import database.orm_query as q
 from utils.check_hex import is_hex_string
 from assets.FSMClass import AddFid, CreateTask
-from database.orm_query import orm_add_user, orm_get_user, orm_top_up_user_balance, orm_update_user_fid, orm_get_tasks, \
-    orm_add_task
+from database.orm_query import orm_top_up_user_balance
 from handlers.menu_process import get_menu_content
 from utils.functions import is_number, get_action_price
 from warpcast import api
@@ -157,8 +156,6 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext
         await msg.answer(text="Сначала укажи стой FID в Profile")
 
 
-
-
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
 async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
     user = await q.orm_get_user_by_tg_id(session=session, telegram_id=call.from_user.id)
@@ -197,25 +194,20 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
 
 #TODO: вытащить в отдельный файл
 def check_cast_from_user(casts, startHash):
-
     for value in casts:
-            if value.startswith(startHash):
-                return True
-
+        if value.startswith(startHash):
+            return True
     return False
+
 
 def get_username_from_url(url):
     username = url.rsplit('/', 1)[0]
     return username
 
 
-
 def get_hash_from_url(url):
     cast_hash = url.rsplit('/', 1)[-1]
     return cast_hash
-
-
-
 
 
 ################################### CREATE TASK ################################
@@ -313,24 +305,30 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
         if slash_index != -1:
             sub_text = check_link[slash_index + 1:]
             if len(sub_text) == 10 and is_hex_string(sub_text) and task_type != "FOLLOW":
+                username = get_username_from_url(check_link)
+                cast_list = api.get_casts_from_user(username)
+                res = check_cast_from_user(cast_list, sub_text)
+                if res:
+                    await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
+                    await q.orm_add_task(
+                        session=session,
+                        user_id=user.id,
+                        task_type=task_type,
+                        url=task_url.replace("https://warpcast.com/", ""),
+                        price=task_price,
+                        actions_count=actions_amount,
+                    )
 
-                await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
-                await q.orm_add_task(
-                    session=session,
-                    user_id=user.id,
-                    task_type=task_type,
-                    url=task_url.replace("https://warpcast.com/", ""),
-                    price=task_price,
-                    actions_count=actions_amount,
-                )
+                    answer = (f"Задание создано:\n\n"
+                              f"Заказ: {task_type}\n"
+                              f"Количество: {actions_amount}\n"
+                              f"Стоимость: {task_price} токена\n"
+                              f"Ссылка: {task_url}")
+                    await state.clear()
+                    await msg.answer(text=answer)
+                else:
+                    await msg.answer(text="Не нашел пост")
 
-                answer = (f"Задание создано:\n\n"
-                          f"Заказ: {task_type}\n"
-                          f"Количество: {actions_amount}\n"
-                          f"Стоимость: {task_price} токена\n"
-                          f"Ссылка: {task_url}")
-                await state.clear()
-                await msg.answer(text=answer)
             else:
                 await msg.answer(text="Некорректная ссылка")
         elif len(check_link) != 0:

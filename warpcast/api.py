@@ -9,8 +9,8 @@ def get_fid_from_username(
 ):
     param = f"user-by-username?username={username}"
     try:
-        responce = requests.get(warp_api+param)
-        fid = responce.json()['result']['user']['fid']
+        response = requests.get(warp_api+param)
+        fid = response.json()['result']['user']['fid']
 
         return fid
     except:
@@ -22,12 +22,12 @@ def get_casts_from_user(
 ):
     try:
         fid = get_fid_from_username(username=username)
-        param = f"casts?fid={fid}"
+        param = f"profile-casts?fid={fid}"
 
-        responce = requests.get(warp_api+param)
+        response = requests.get(warp_api+param)
 
-        hash_list = [cast['hash'] for cast in responce.json()['result']['casts']]
-
+        hash_list = [cast['hash'] for cast in response.json()['result']['casts']]
+        print(hash_list)
         return hash_list
     except:
         return None
@@ -46,7 +46,7 @@ def get_cast_likers():
 def get_recasters():
     pass
 
-r = get_casts_from_user("imthedude")
-print(r)
-res = requests.get("https://client.warpcast.com/v2/user-by-username?username=imthedude")
-print(res.json())
+
+
+
+get_casts_from_user("kokos-crypto")
