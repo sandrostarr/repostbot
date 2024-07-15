@@ -47,6 +47,7 @@ def complete_task_kb(
         url: str,
         sizes: tuple[int] = (1,),
         approve: bool = False
+
 ):
     keyboard = InlineKeyboardBuilder()
 
