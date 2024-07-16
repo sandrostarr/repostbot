@@ -18,6 +18,19 @@ def get_fid_from_username(
         return None
 
 
+def get_cast_hash(
+        username: str,
+        hash_prefix: str,
+):
+    param = f"user-cast?username={username}&hashPrefix={hash_prefix}"
+    try:
+        response = requests.get(warp_api + param)
+        cast_hash = response.json()['result']['cast']['hash']
+        return cast_hash
+    except:
+        return None
+
+
 def get_casts_from_user(
         username: str,
 ):
