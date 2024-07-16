@@ -80,11 +80,20 @@ async def orm_get_tasks(session: AsyncSession, task_type: str, not_completed: bo
     return result.scalars().all()
 
 
-async def orm_add_task(session: AsyncSession, user_id: int, task_type: str, url: str, price: int, actions_count: int):
+async def orm_add_task(
+        session: AsyncSession,
+        user_id: int,
+        task_type: str,
+        url: str,
+        price: int,
+        actions_count: int,
+        cast_hash: str = None,
+):
     obj = Task(
         user_id=user_id,
         type=task_type,
         url=url,
+        cast_hash=cast_hash,
         price=price,
         actions_count=actions_count,
     )
@@ -100,3 +109,15 @@ async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int)
     )
     session.add(obj)
     await session.commit()
+
+
+# async def orm_get_task_actions(session: AsyncSession, not_verified: bool = True):
+#     if not_verified:
+#         query = select(TaskAction).where(
+#             (TaskAction.type == task_type) &
+#             (Task.is_completed == False)
+#         )
+#     else:
+#         query = select(Task).where(Task.type == task_type)
+#     result = await session.execute(query)
+#     return result.scalars().all()

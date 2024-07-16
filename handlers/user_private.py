@@ -10,30 +10,14 @@ import keyboard.inline as ikb
 import database.orm_query as q
 from utils.check_hex import is_hex_string
 from assets.FSMClass import AddFid, CreateTask
-from database.orm_query import orm_top_up_user_balance
 from handlers.menu_process import get_menu_content
 from utils.functions import is_number, get_action_price
 from warpcast import api
 
 user_private_router = Router()
 
-ActionsPrices = {
-    'LIKE': 2,
-    'RECAST': 4,
-    'FOLLOW': 6,
-}
 
-
-# TODO метод проверки на int. Можно будет потом вынести в отдельную библиотечку проектную, если ещё где-то потребуется
-def is_number(string):
-    try:
-        int(string)
-        return True
-    except ValueError:
-        return False
-
-
-################################ USER COMMANDS ################################
+# ############################### USER COMMANDS ################################
 @user_private_router.message(CommandStart())
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
@@ -80,15 +64,14 @@ async def faq_cmd(msg: Message, state: FSMContext):
               f" |  Recast |    2 min  | \n"
               f" |  Follow |    3 min  | \n"
               f" ----------------------- \n\n"
-              f"4. В случае если вы выполнили задание и в течении 72 часов отменили его, вводится система штрафов.\n\n"
+              f"4. В случае если вы выполнили задание и в течение 72 часов отменили его, вводится система штрафов.\n\n"
               f"5. Нажав кнопку выполнил, но не выполнили задание, не будут начислены токены, штрафы не предусмотрены.\n\n"
               f"6. Остались вопросы? Пишите на гос услуги @username \n\n"
               )
     await msg.answer(text=answer)
 
 
-################################### PROFILE ###################################
-#Профиль добавил кнопку Добавить FID если он отсутствует + добавление
+# ################################## PROFILE ###################################
 @user_private_router.message(F.text == "Профиль")
 async def show_profile_data(msg: Message, session: AsyncSession, state: FSMContext):
     await msg.delete()
@@ -143,17 +126,16 @@ async def add_fid_data(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
 
 
-################################### EARN TOKEN ################################
+# ################################## EARN TOKEN ################################
 @user_private_router.message(F.text == "Заработать токены")
 async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
     user = await q.orm_get_user(session=session, msg=msg)
     if user.fid is not None:
-        await orm_top_up_user_balance(session=session, msg=msg, balance=1)
         answer, reply_markup = await get_menu_content(session, level=0)
         await msg.answer(text=answer, reply_markup=reply_markup)
     else:
-        await msg.answer(text="Сначала укажи стой FID в Profile")
+        await msg.answer(text="Сначала укажи свой FID в разделе «Профиль»")
 
 
 @user_private_router.callback_query(ikb.MenuEarnCallback.filter())
@@ -192,7 +174,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         await call.answer()
 
 
-#TODO: вытащить в отдельный файл
+# TODO: вытащить в отдельный файл
 def check_cast_from_user(casts, startHash):
     for value in casts:
         if value.startswith(startHash):
@@ -210,7 +192,7 @@ def get_hash_from_url(url):
     return cast_hash
 
 
-################################### CREATE TASK ################################
+# ################################## CREATE TASK ################################
 @user_private_router.message(F.text == "Заказать накрутку")
 async def create_task(msg: Message, state: FSMContext):
     await state.clear()
@@ -303,12 +285,10 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
         check_link = task_url[len("https://warpcast.com/"):]
         slash_index = check_link.find("/")
         if slash_index != -1:
-            sub_text = check_link[slash_index + 1:]
-            if len(sub_text) == 10 and is_hex_string(sub_text) and task_type != "FOLLOW":
+            hash_prefix = check_link[slash_index + 1:]
+            if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
                 username = get_username_from_url(check_link)
-                cast_list = api.get_casts_from_user(username)
-                cast_hash = check_cast_from_user(cast_list, sub_text)
-                print(cast_hash)
+                cast_hash = api.get_cast_hash(username, hash_prefix)
                 if cast_hash:
                     await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                     await q.orm_add_task(
@@ -318,6 +298,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                         url=task_url.replace("https://warpcast.com/", ""),
                         price=task_price,
                         actions_count=actions_amount,
+                        cast_hash=cast_hash,
                     )
 
                     answer = (f"Задание создано:\n\n"

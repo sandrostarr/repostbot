@@ -53,7 +53,7 @@ async def buy_token(
         sessioon: AsyncSession,
         level: int,
 ):
-    answer = (f"Сорян пока нет такой возможности, но принимаем DONATION")
+    answer = f"Сорян пока нет такой возможности, но принимаем DONATION"
     kb = buy_token_kb(
         level=level
     )

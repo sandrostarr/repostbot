@@ -24,6 +24,7 @@ class Task(Base):
     user_id: Mapped[int] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False)
     url: Mapped[str] = mapped_column(nullable=False)
+    cast_hash: Mapped[str] = mapped_column(nullable=True)
     price: Mapped[int] = mapped_column(nullable=True)
     actions_count: Mapped[int] = mapped_column(nullable=False, default=0)
     actions_completed: Mapped[int] = mapped_column(nullable=False, default=0)
