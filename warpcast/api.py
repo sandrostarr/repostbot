@@ -62,13 +62,21 @@ def get_followers(
 
 def get_cast_likers(
         cast_hash: str,
+        cursor: str = '',
+        limit: int = 100,
 ):
-    param = f"cast-likes?castHash={cast_hash}"
+    param = f"cast-likes?cursor={cursor}&castHash={cast_hash}&limit={limit}"
     try:
         response = requests.get(warp_api + param)
         likers = response.json()
         likers_fids = [like['reactor']['fid'] for like in likers['result']['likes']]
-        return likers_fids
+
+        try:
+            cursor = (likers['next']['cursor'])
+        except:
+            cursor = None
+
+        return likers_fids, cursor
     except:
         return None
 
@@ -85,6 +93,3 @@ def get_recasters(
         return recasters_fids
     except:
         return None
-
-
-

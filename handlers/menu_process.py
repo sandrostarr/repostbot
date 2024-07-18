@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.models import Task, User
 from database.orm_query import orm_add_task_action, orm_top_up_user_balance_by_user_id
 from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 from utils.functions import get_action_earning
+from handlers.action_checker import check_like_existence, check_recast_existence, check_follow_existence
 
 
 # основное меню для заданий
@@ -15,30 +17,45 @@ async def task_menu(session, level):
 async def task_complete(
         session: AsyncSession,
         level: int,
-        task_type: str,
-        task_id: int,
-        user_id: int,
+        task: Task,
+        user: User,
         page: int = 0,
         url: str | None = None,
         approve: bool = False,
 ):
-    answer = (f"Переходи по ссылке и {task_type}\n\n"
+    answer = (f"Переходи по ссылке и {task.type}\n\n"
               f"{url}")
     if approve:
-        action_earning = get_action_earning(task_type)
+        action_earning = get_action_earning(task.type)
         await orm_add_task_action(
             session=session,
-            user_id=user_id,
-            task_id=task_id,
+            user_id=user.id,
+            task_id=task.id,
         )
-        # TODO сделано для тестов. Перед начислением токенов необходимо добавить проверку на наличие лайка и пр.
-        await orm_top_up_user_balance_by_user_id(session=session, user_id=user_id, balance_change=action_earning)
-        answer = f"Давай Следующий"
+
+        check_success = False
+        if task.type == 'LIKE':
+            if await check_like_existence(cast_hash=task.cast_hash, fid=user.fid):
+                check_success = True
+        elif task.type == 'RECAST':
+            # TODO доделать
+            if await check_recast_existence(cast_hash=task.cast_hash, fid=user.fid):
+                check_success = True
+        elif task.type == 'FOLLOW':
+            # TODO доделать
+            if await check_follow_existence(cast_hash=task.cast_hash, fid=user.fid):
+                check_success = True
+
+        if check_success:
+            await orm_top_up_user_balance_by_user_id(session=session, user_id=user.id, balance_change=action_earning)
+        else:
+            # TODO пока такую заглушку сделал. Возможно, надо как-то иначе сделать
+            answer = f"Задание не выполнено. Перейти к следующему"
 
     kb = complete_task_kb(
         level=level,
-        task_type=task_type,
-        task_id=task_id,
+        task_type=task.type,
+        task_id=task.id,
         page=page,
         url=url,
         approve=approve,
@@ -64,9 +81,8 @@ async def buy_token(
 async def get_menu_content(
         session: AsyncSession,
         level: int,
-        task_type: str | None = None,
-        task_id: int | None = None,
-        user_id: int | None = None,
+        task: Task | None = None,
+        user: User | None = None,
         page: int = 0,
         url: str | None = None,
         approve: bool = False
@@ -75,6 +91,6 @@ async def get_menu_content(
     if level == 0:
         return await task_menu(session, level)
     elif level == 1:
-        return await task_complete(session, level, task_type, task_id, user_id, page, url, approve)
+        return await task_complete(session, level, task, user, page, url, approve)
     elif level == 7:
         return await buy_token(session, level)

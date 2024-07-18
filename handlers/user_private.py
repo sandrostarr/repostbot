@@ -148,20 +148,17 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
 
         page = callback_data.page
         if page >= len(tasks):
-            task_data = tasks[0]
+            task = tasks[0]
             page = 0
         else:
-            task_data = tasks[page]
-        task_url = task_data.url
-        task_id = task_data.id
+            task = tasks[page]
         answer, reply_markup = await get_menu_content(
             session,
             level=callback_data.level,
-            task_type=callback_data.task_type,
-            task_id=task_id,
-            user_id=user.id,
+            task=task,
+            user=user,
             page=page,
-            url=f"https://warpcast.com/" + task_url,
+            url=f"https://warpcast.com/" + task.url,
             approve=callback_data.approve,
         )
 
