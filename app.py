@@ -13,6 +13,7 @@ load_dotenv(find_dotenv())
 
 from middlewares.db import DataBaseSession
 from handlers.user_private import user_private_router
+from handlers.admin_panel import admin_route
 from assets.bot_cmd_list import private
 from database.engine import create_db, drop_db, session_maker
 
@@ -26,7 +27,8 @@ bot = Bot(token=os.getenv('BOT_TOKEN'),
           )
 dp = Dispatcher()
 
-dp.include_routers(user_private_router)
+dp.include_routers(user_private_router,
+                   admin_route)
 
 
 async def on_startup():

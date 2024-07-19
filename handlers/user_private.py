@@ -12,11 +12,10 @@ import keyboard.reply as rkb
 import keyboard.inline as ikb
 import database.orm_query as q
 import logging
-from utils.check_hex import is_hex_string
-from assets.FSMClass import AddFid, CreateTask, AdminTopUp, calcTokens
+from utils.functions import is_hex_string
+from assets.FSMClass import AddFid, CreateTask
 from handlers.menu_process import get_menu_content
-from utils.functions import is_number, get_action_price
-from utils.summ_to_pay import summ_result
+from utils.functions import is_number, get_action_price, get_username_from_url
 from warpcast import api
 
 
@@ -80,16 +79,17 @@ async def faq_cmd(msg: Message, state: FSMContext):
               f" |  Recast |     2      |   4   | \n"
               f" |  Follow |     3      |   6   | \n"
               f" -------------------------------- \n\n"
-              f"3. Время за которое начисляются 🧲 (мин):\n"
+              f"3. Минимальный заказ каждой услуги от 5\n\n"
+              f"4. Время за которое начисляются 🧲 (мин):\n"
               f" _______________________ \n"
               f" | Задание |   Время   | \n"
-              f" |   Like  |    1 min  | \n"
+              f" |  Like   |    1 min  | \n"
               f" |  Recast |    2 min  | \n"
               f" |  Follow |    3 min  | \n"
               f" ----------------------- \n\n"
-              f"4. В случае если вы выполнили задание и в течение 72 часов отменили его, вводится система штрафов.\n\n"
-              f"5. Нажав кнопку выполнил, но не выполнили задание, не будут начислены 🧲, штрафы не предусмотрены.\n\n"
-              f"6. Остались вопросы? Пишите на гос услуги @username \n\n"
+              f"5. В случае если вы выполнили задание и в течение 72 часов отменили его, вводится система штрафов.\n\n"
+              f"6. Нажав кнопку выполнил, но не выполнили задание, не будут начислены 🧲, штрафы не предусмотрены.\n\n"
+              f"7. Остались вопросы? Пишите на гос услуги @username \n\n"
               )
     await msg.answer(text=answer, parse_mode="HTML")
 
@@ -219,24 +219,6 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
 
 
 
-# TODO: вытащить в отдельный файл
-def check_cast_from_user(casts, startHash):
-    for value in casts:
-        if value.startswith(startHash):
-            return True, value
-    return False
-
-
-def get_username_from_url(url):
-    username = url.rsplit('/', 1)[0]
-    return username
-
-
-def get_hash_from_url(url):
-    cast_hash = url.rsplit('/', 1)[-1]
-    return cast_hash
-
-
 # ################################## CREATE TASK ################################
 @user_private_router.message(F.text == "Заказать накрутку")
 async def create_task(msg: Message, state: FSMContext):
@@ -290,8 +272,8 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
             actions_amount = int(actions_amount)
             task_price = actions_amount * data['TASK_PRICE']
             await state.update_data(TASK_PRICE=task_price)
-            if actions_amount <= 0:
-                await msg.answer(text="Введите число больше 0")
+            if actions_amount <= 5:
+                await msg.answer(text="Введите число больше 5")
             else:
                 if task_type == "FOLLOW":
                     if actions_amount >= 50:
@@ -305,8 +287,10 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
                         await state.set_state(CreateTask.TASK_URL)
                         await msg.answer(text=answer)
                 else:
-                    if actions_amount >= 20 or actions_amount <= 0:
+                    if actions_amount >= 20:
                         await msg.answer(text="Введите число меньше 20")
+                    elif actions_amount <= 5:
+                        await msg.answer(text="Введите число больше 5")
                     else:
                         task_link = "пост"
                         answer = (f"Отправьте ссылку на {task_link}\n"
@@ -396,106 +380,30 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
         logging.info(f"{msg.from_user.id} - указал кривую ссылку")
 
 
-# ################################## TOP UP USER ###################################
-@user_private_router.message(F.text == "Пополнить USER")
-async def top_up_start(msg: Message, session: AsyncSession, state: FSMContext):
-    logging.info(f"{msg.from_user.id} - Админ пополняет кому то баланс")
+
+
+
+
+# ################################## TASK_LIST ###################################
+@user_private_router.message(F.text == "Мои заказы")
+async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMContext):
+    logging.info(f"{msg.from_user.id} - Посмотреть заказы")
     await msg.delete()
     await state.clear()
-
-    answer = (f"Перешли сообщение пользователя кому пополняем")
-    await msg.answer(text=answer)
-    await state.set_state(AdminTopUp.GET_TG_ID)
-
-
-
-
-
-@user_private_router.message(AdminTopUp.GET_TG_ID)
-async def topup_get_id(msg: Message, session:AsyncSession, state: FSMContext):
-
-    if msg.forward_from:
-        logging.info(f"{msg.from_user.id} - Выбрал Юзера через отправленное сообщение")
-        user_id = msg.forward_from.id
-        try:
-            await q.orm_get_user_by_tg_id(session=session, telegram_id=user_id)
-            await state.update_data(USER_ID = user_id)
-            answer = ("Сколько начислить?")
-            await msg.answer(text=answer)
-            await state.set_state(AdminTopUp.GET_TOP_UP)
-        except:
-            answer = ("такой не найден юзер")
-            await msg.answer(text=answer)
-    #TODO: сделать проверку в БД по username
-    elif msg.text.startswith("@"):
-        username = msg.text
-        await state.update_data(USER_NAME=username)
-        answer = ("Сколько начислить?")
-        await msg.answer(text=answer)
-        await state.set_state(AdminTopUp.GET_TOP_UP)
+    #TODO: выдергивать с БД данные
+    data = []
+    answer = f"Список заказов: \n\n"
+    if data != []:
+        for items in data:
+            if int(items["action_count"]) >= int(items["action_completed"]):
+                ind = "🟢"
+            elif int(items["action_count"]) > 0 and int(items["action_count"]) < int(items["action_completed"]):
+                ind = "🟡"
+            else:
+                ind = "🔴"
+            answer = answer + f"{ind} {items['task_type']} {items['action_count']} / {items['action_completed']} - <a href = '{items['task_url']}'> ссылка </a>\n"
     else:
-        answer = ("Ебалай перешли сообщение от пользователя")
-        await msg.answer(text=answer)
-
-
-@user_private_router.message(AdminTopUp.GET_TOP_UP)
-async def topup_get_value(msg: Message, state: FSMContext):
-    logging.info(f"{msg.from_user.id} - Выбрал cумма пополнения")
-    await state.update_data(TUP_UP_SUM = msg.text)
-    answer = ("HASH транзакии или комментарий кто что и почему пополнил")
+        answer = answer + f"Нет заказов"
     await msg.answer(text=answer)
-    await state.set_state(AdminTopUp.GET_APPROVE)
 
 
-
-@user_private_router.message(AdminTopUp.GET_APPROVE)
-async def top_up_get_approve(msg: Message, session: AsyncSession, state: FSMContext):
-    logging.info(f"{msg.from_user.id} - Апрув добавлен")
-    data = await state.get_data()
-    user_id = data["USER_ID"]
-    top_up_sum = data["TUP_UP_SUM"]
-    proof = msg.text
-    answer = (f"Пополнил {user_id} на {top_up_sum} 🧲\n"
-              f"PROOF: {proof}")
-    await msg.answer(text=answer)
-    await state.clear()
-
-# ################################## COUNT ###################################
-
-@user_private_router.message(F.text == "Посчитать токены")
-async def calc_summ(msg: Message, session: AsyncSession, state: FSMContext):
-    logging.info(f"{msg.from_user.id} - Калькулятор токенов")
-    await msg.delete()
-    await state.clear()
-    answer = (f"количество токенов")
-    await msg.answer(text=answer)
-    await state.set_state(calcTokens.GET_VALUE)
-
-
-
-@user_private_router.message(calcTokens.GET_VALUE)
-async def calc_summ_get_value(msg: Message, session: AsyncSession, state: FSMContext):
-    logging.info(f"{msg.from_user.id} - get token value")
-    await state.set_state(calcTokens.GET_CURRENCY)
-    await state.update_data(VALUE=int(msg.text))
-    answer = (f"В чем отправлять будут?")
-    await msg.answer(text=answer, reply_markup=ikb.create_callback_ikb(btns={"USDT": "USDT",
-                                                                             "ETH": "ETH",
-                                                                             "MATIC": "MATIC"},
-                                                                       sizes=(1,1,1,)
-                                                                       ))
-
-
-
-@user_private_router.callback_query(calcTokens.GET_CURRENCY)
-async def calc_summ_get_curr(call: CallbackQuery, state: FSMContext):
-    logging.info(f"{call.from_user.id} - get currency")
-    data = await state.get_data()
-    value = data["VALUE"]
-    sum = summ_result(tokens_value=value, currency=call.data)
-
-    answer = (f"{value} 🧲 = {sum} {call.data}\n"
-              f"Адрес для отправки: <i>0x000000000000000000000000000000000</i>")
-
-    await call.message.edit_text(text=answer)
-    await state.clear()
