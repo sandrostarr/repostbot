@@ -101,6 +101,13 @@ async def orm_add_task(
     await session.commit()
 
 
+async def increase_task_actions_completed_count(session: AsyncSession, task: Task):
+    actions_completed = task.actions_completed + 1
+    task.actions_completed = actions_completed
+    session.add(task)
+    await session.commit()
+
+
 async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int):
     obj = TaskAction(
         task_id=task_id,
@@ -108,6 +115,13 @@ async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int)
         is_completed=True,
     )
     session.add(obj)
+    await session.commit()
+    return obj
+
+
+async def orm_verify_task_action(session: AsyncSession, task_action: TaskAction):
+    task_action.is_verified = True
+    session.add(task_action)
     await session.commit()
 
 
