@@ -31,8 +31,8 @@ def get_main_inline_kb(
                                           callback_data=MenuEarnCallback(level=level + 1, menu_name=data,
                                                                          task_type=name).pack()))
 
-    keyboard.add(InlineKeyboardButton(text="КУПИТЬ ТОКЕНСЫ",
-                                      callback_data=MenuEarnCallback(level=7, menu_name="BUY_TOKENS").pack()))
+    keyboard.add(InlineKeyboardButton(text="КУПИТЬ 🧲",
+                                      callback_data=MenuEarnCallback(level=7, task_type="BUY_TOKENS").pack()))
 
     return keyboard.adjust(*sizes).as_markup()
 

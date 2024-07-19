@@ -70,7 +70,7 @@ async def buy_token(
         sessioon: AsyncSession,
         level: int,
 ):
-    answer = f"Сорян пока нет такой возможности, но принимаем DONATION"
+    answer = f"Только в ручном режиме, напиши @username"
     kb = buy_token_kb(
         level=level
     )
