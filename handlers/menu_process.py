@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Task, User
-from database.orm_query import orm_add_task_action, orm_top_up_user_balance_by_user_id
+from database.orm_query import (orm_add_task_action, orm_top_up_user_balance_by_user_id, orm_verify_task_action,
+                                increase_task_actions_completed_count)
 from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 from utils.functions import get_action_earning
 from handlers.action_checker import check_like_existence, check_recast_existence, check_follow_existence
@@ -27,7 +28,7 @@ async def task_complete(
               f"{url}")
     if approve:
         action_earning = get_action_earning(task.type)
-        await orm_add_task_action(
+        task_action = await orm_add_task_action(
             session=session,
             user_id=user.id,
             task_id=task.id,
@@ -48,6 +49,8 @@ async def task_complete(
 
         if check_success:
             await orm_top_up_user_balance_by_user_id(session=session, user_id=user.id, balance_change=action_earning)
+            await orm_verify_task_action(session=session, task_action=task_action)
+            await increase_task_actions_completed_count(session=session, task=task)
         else:
             # TODO пока такую заглушку сделал. Возможно, надо как-то иначе сделать
             answer = f"Задание не выполнено. Перейти к следующему"
