@@ -218,7 +218,6 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         logging.info(f"{call.from_user.id} - нет квестов")
 
 
-
 # ################################## CREATE TASK ################################
 @user_private_router.message(F.text == "Заказать накрутку")
 async def create_task(msg: Message, state: FSMContext):
@@ -243,17 +242,17 @@ async def get_type_of_task(call: CallbackQuery, state: FSMContext):
     if call.data == "LIKE":
         answer = (f"Сколько лайков нужно накрутить?\n\n"
                   f"Стоимость одного лайка = {action_price} 🧲\n\n"
-                  f"<i>*в бета тесте нельзя заказать более 20 лайков за 1 заказ</i>")
+                  f"<i>*в бета тесте нельзя заказать менее 5 и более 20 лайков за 1 заказ</i>")
         await state.update_data(TASK_TYPE="LIKE")
     if call.data == "RECAST":
         answer = (f"Сколько рекастов нужно сделать?\n\n"
                   f"Стоимость одного рекаста = {action_price} 🧲\n\n"
-                  f"<i>*в бета тесте нельзя заказать более 20 рекастов за 1 заказ</i>")
+                  f"<i>*в бета тесте нельзя заказать менее 5 и более 20 рекастов за 1 заказ</i>")
         await state.update_data(TASK_TYPE="RECAST")
     if call.data == "FOLLOW":
         answer = (f"Сколько подписчиков нужно сделать?\n\n"
                   f"Стоимость одного подписчика = {action_price} 🧲\n\n"
-                  f"<i>*в бета тесте нельзя заказать более 50 подписчиков за 1 заказ</i>")
+                  f"<i>*в бета тесте нельзя заказать менее 5 и более 20 подписчиков за 1 заказ</i>")
         await state.update_data(TASK_TYPE="FOLLOW")
 
     await state.set_state(CreateTask.TASK_ACTIONS_AMOUNT)
@@ -268,37 +267,28 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
     task_type = data['TASK_TYPE']
     actions_amount = msg.text
     if is_number(actions_amount):
-        if user.balance >= int(actions_amount) * get_action_price(task_type):
-            actions_amount = int(actions_amount)
+        actions_amount = int(actions_amount)
+        if actions_amount < 5 or actions_amount > 20:
+            await msg.answer(text="Введите число от 5 до 20")
+        elif user.balance >= int(actions_amount) * get_action_price(task_type):
             task_price = actions_amount * data['TASK_PRICE']
             await state.update_data(TASK_PRICE=task_price)
-            if actions_amount <= 5:
-                await msg.answer(text="Введите число больше 5")
+            if task_type == "FOLLOW":
+                task_link = "профиль"
+                answer = (f"Отправьте ссылку на {task_link}\n"
+                          f"Стоимость услуги составит {task_price} 🧲\n"
+                          f"Пример:<i> https://warpcast.com/vitalik.eth </i>")
+                await state.update_data(ACTIONS_AMOUNT=actions_amount)
+                await state.set_state(CreateTask.TASK_URL)
+                await msg.answer(text=answer)
             else:
-                if task_type == "FOLLOW":
-                    if actions_amount >= 50:
-                        await msg.answer(text="Введите число меньше 50")
-                    else:
-                        task_link = "профиль"
-                        answer = (f"Отправьте ссылку на {task_link}\n"
-                                  f"Стоимость услуги составит {task_price} 🧲\n"
-                                  f"Пример:<i> https://warpcast.com/vitalik.eth </i>")
-                        await state.update_data(ACTIONS_AMOUNT=actions_amount)
-                        await state.set_state(CreateTask.TASK_URL)
-                        await msg.answer(text=answer)
-                else:
-                    if actions_amount >= 20:
-                        await msg.answer(text="Введите число меньше 20")
-                    elif actions_amount <= 5:
-                        await msg.answer(text="Введите число больше 5")
-                    else:
-                        task_link = "пост"
-                        answer = (f"Отправьте ссылку на {task_link}\n"
-                                  f"Стоимость услуги составит {task_price} 🧲\n"
-                                  f"Пример: <i> https://warpcast.com/vitalik.eth/0xf2fb9ef7 </i>")
-                        await state.update_data(ACTIONS_AMOUNT=actions_amount)
-                        await state.set_state(CreateTask.TASK_URL)
-                        await msg.answer(text=answer)
+                task_link = "пост"
+                answer = (f"Отправьте ссылку на {task_link}\n"
+                          f"Стоимость услуги составит {task_price} 🧲\n"
+                          f"Пример: <i> https://warpcast.com/vitalik.eth/0xf2fb9ef7 </i>")
+                await state.update_data(ACTIONS_AMOUNT=actions_amount)
+                await state.set_state(CreateTask.TASK_URL)
+                await msg.answer(text=answer)
         else:
             await msg.answer(text="Недостаточно 🧲")
             logging.info(f"{msg.from_user.id} - нет баланса")
