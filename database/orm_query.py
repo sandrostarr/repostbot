@@ -68,12 +68,17 @@ async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balanc
     await session.commit()
 
 
-async def orm_get_tasks(session: AsyncSession, task_type: str, not_completed: bool = True):
+async def orm_get_tasks(session: AsyncSession, task_type: str, user_id: int, not_completed: bool = True):
     if not_completed:
-        query = select(Task).where(
+        query = (select(Task).join(
+            TaskAction,
+            (TaskAction.task_id == Task.id) & (TaskAction.user_id == user_id),
+            isouter=True
+        ).where(
             (Task.type == task_type) &
-            (Task.is_completed == False)
-        )
+            (Task.is_completed == False) &
+            (TaskAction.id == None)
+        ))
     else:
         query = select(Task).where(Task.type == task_type)
     result = await session.execute(query)
@@ -104,6 +109,10 @@ async def orm_add_task(
 async def increase_task_actions_completed_count(session: AsyncSession, task: Task):
     actions_completed = task.actions_completed + 1
     task.actions_completed = actions_completed
+
+    if actions_completed >= task.actions_count:
+        task.is_completed = True
+
     session.add(task)
     await session.commit()
 
