@@ -174,7 +174,7 @@ async def earn_buy_tokens(msg: Message, session: AsyncSession, state: FSMContext
 async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCallback, session: AsyncSession):
     logging.info(f"{call.from_user.id} - пагинация")
     user = await q.orm_get_user_by_tg_id(session=session, telegram_id=call.from_user.id)
-    tasks = await q.orm_get_tasks(session=session, task_type=callback_data.task_type)
+    tasks = await q.orm_get_tasks(session=session, task_type=callback_data.task_type, user_id=user.id)
 
     if callback_data.task_type == "BUY_TOKENS":
         logging.info(f"{call.from_user.id} - захотел прикупить токены")
