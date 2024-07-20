@@ -81,15 +81,22 @@ def get_cast_likers(
         return None
 
 
-def get_recasters(
+def get_cast_recasters(
         cast_hash: str,
+        cursor: str = '',
+        limit: int = 100,
 ):
-    param = f"cast-recasters?castHash={cast_hash}"
+    param = f"cast-recasters?cursor={cursor}&castHash={cast_hash}&limit={limit}"
     try:
         response = requests.get(warp_api + param)
         recasters = response.json()
-
         recasters_fids = [user['fid'] for user in recasters['result']['users']]
-        return recasters_fids
+
+        try:
+            cursor = (recasters['next']['cursor'])
+        except:
+            cursor = None
+
+        return recasters_fids, cursor
     except:
         return None

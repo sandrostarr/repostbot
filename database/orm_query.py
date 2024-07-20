@@ -68,14 +68,16 @@ async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balanc
     await session.commit()
 
 
+# TODO можно разделить метод на 2 (получение всех заданий и получение заданий с фильтрами на выполнение, user_id и т.д.)
 async def orm_get_tasks(session: AsyncSession, task_type: str, user_id: int, not_completed: bool = True):
     if not_completed:
         query = (select(Task).join(
             TaskAction,
             (TaskAction.task_id == Task.id) & (TaskAction.user_id == user_id),
-            isouter=True
+            isouter=True,
         ).where(
             (Task.type == task_type) &
+            (Task.user_id != user_id) &
             (Task.is_completed == False) &
             (TaskAction.id == None)
         ))

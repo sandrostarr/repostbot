@@ -39,7 +39,6 @@ async def task_complete(
             if await check_like_existence(cast_hash=task.cast_hash, fid=user.fid):
                 check_success = True
         elif task.type == 'RECAST':
-            # TODO доделать
             if await check_recast_existence(cast_hash=task.cast_hash, fid=user.fid):
                 check_success = True
         elif task.type == 'FOLLOW':
