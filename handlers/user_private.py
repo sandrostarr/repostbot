@@ -370,30 +370,27 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
         logging.info(f"{msg.from_user.id} - указал кривую ссылку")
 
 
-
-
-
-
 # ################################## TASK_LIST ###################################
 @user_private_router.message(F.text == "Мои заказы")
 async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Посмотреть заказы")
     await msg.delete()
     await state.clear()
-    #TODO: выдергивать с БД данные
-    data = []
+
+    user = await q.orm_get_user(session=session, msg=msg)
+    tasks = await q.orm_get_tasks_by_user_id(session, user.id)
+
     answer = f"Список заказов: \n\n"
-    if data != []:
-        for items in data:
-            if int(items["action_count"]) >= int(items["action_completed"]):
+    if tasks:
+        for task in tasks:
+            if task.is_completed:
                 ind = "🟢"
-            elif int(items["action_count"]) > 0 and int(items["action_count"]) < int(items["action_completed"]):
+            elif task.actions_completed > 0:
                 ind = "🟡"
             else:
                 ind = "🔴"
-            answer = answer + f"{ind} {items['task_type']} {items['action_count']} / {items['action_completed']} - <a href = '{items['task_url']}'> ссылка </a>\n"
+            answer = answer + f"{ind} {task.type} {task.actions_completed} / {task.actions_count} - <a href = '{task.url}'> ссылка </a>\n"
     else:
         answer = answer + f"Нет заказов"
+
     await msg.answer(text=answer)
-
-
