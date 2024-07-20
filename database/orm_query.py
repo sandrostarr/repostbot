@@ -87,6 +87,12 @@ async def orm_get_tasks(session: AsyncSession, task_type: str, user_id: int, not
     return result.scalars().all()
 
 
+async def orm_get_tasks_by_user_id(session: AsyncSession, user_id: int):
+    query = select(Task).where(Task.user_id == user_id)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
 async def orm_add_task(
         session: AsyncSession,
         user_id: int,
