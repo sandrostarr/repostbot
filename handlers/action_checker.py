@@ -25,10 +25,13 @@ async def check_recast_existence(cast_hash: str, fid: int, cursor: str = ''):
             return False
 
 
-async def check_follow_existence(cast_hash, fid):
-    return False
-    # likers_fids = api.get_cast_likers(cast_hash=cast_hash)
-    # if fid in likers_fids:
-    #     return True
-    # else:
-    #     return False
+async def check_follow_existence(username: str, fid: int, cursor: str = ''):
+    followers_ids, cursor = api.get_followers(username=username, cursor=cursor)
+
+    if fid in followers_ids:
+        return True
+    else:
+        if cursor is not None:
+            return await check_follow_existence(username=username, fid=fid, cursor=cursor)
+        else:
+            return False
