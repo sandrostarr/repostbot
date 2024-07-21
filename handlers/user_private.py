@@ -12,6 +12,8 @@ import keyboard.reply as rkb
 import keyboard.inline as ikb
 import database.orm_query as q
 import logging
+
+from errors.InsufficientFundsException import InsufficientFundsException
 from utils.functions import is_hex_string
 from assets.FSMClass import AddFid, CreateTask
 from handlers.menu_process import get_menu_content
@@ -308,12 +310,43 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
     if task_url.lower().startswith("https://warpcast.com/"):
         check_link = task_url[len("https://warpcast.com/"):]
         slash_index = check_link.find("/")
-        if slash_index != -1:
-            hash_prefix = check_link[slash_index + 1:]
-            if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
-                username = get_username_from_url(check_link)
-                cast_hash = api.get_cast_hash(username, hash_prefix)
-                if cast_hash:
+
+        try:
+            if slash_index != -1:
+                hash_prefix = check_link[slash_index + 1:]
+                if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
+                    username = get_username_from_url(check_link)
+                    cast_hash = api.get_cast_hash(username, hash_prefix)
+                    if cast_hash:
+
+                        await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
+                        await q.orm_add_task(
+                            session=session,
+                            user_id=user.id,
+                            task_type=task_type,
+                            url=task_url.replace("https://warpcast.com/", ""),
+                            price=task_price,
+                            actions_count=actions_amount,
+                            cast_hash=cast_hash,
+                        )
+
+                        answer = (f"Задание создано:\n\n"
+                                  f"Заказ: {task_type}\n"
+                                  f"Количество: {actions_amount}\n"
+                                  f"Стоимость: {task_price} 🧲\n"
+                                  f"Ссылка: {task_url}")
+                        await state.clear()
+                        await msg.answer(text=answer)
+                    else:
+                        await msg.answer(text="Не нашел пост")
+                        logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+
+                else:
+                    await msg.answer(text="Некорректная ссылка")
+                    logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+            elif len(check_link) != 0:
+                if task_type == "FOLLOW":
+
                     await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                     await q.orm_add_task(
                         session=session,
@@ -322,7 +355,6 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                         url=task_url.replace("https://warpcast.com/", ""),
                         price=task_price,
                         actions_count=actions_amount,
-                        cast_hash=cast_hash,
                     )
 
                     answer = (f"Задание создано:\n\n"
@@ -333,38 +365,13 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                     await state.clear()
                     await msg.answer(text=answer)
                 else:
-                    await msg.answer(text="Не нашел пост")
+                    await msg.answer(text="Некорректная ссылка")
                     logging.info(f"{msg.from_user.id} - указал кривую ссылку")
-
             else:
                 await msg.answer(text="Некорректная ссылка")
                 logging.info(f"{msg.from_user.id} - указал кривую ссылку")
-        elif len(check_link) != 0:
-            if task_type == "FOLLOW":
-
-                await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
-                await q.orm_add_task(
-                    session=session,
-                    user_id=user.id,
-                    task_type=task_type,
-                    url=task_url.replace("https://warpcast.com/", ""),
-                    price=task_price,
-                    actions_count=actions_amount,
-                )
-
-                answer = (f"Задание создано:\n\n"
-                          f"Заказ: {task_type}\n"
-                          f"Количество: {actions_amount}\n"
-                          f"Стоимость: {task_price} 🧲\n"
-                          f"Ссылка: {task_url}")
-                await state.clear()
-                await msg.answer(text=answer)
-            else:
-                await msg.answer(text="Некорректная ссылка")
-                logging.info(f"{msg.from_user.id} - указал кривую ссылку")
-        else:
-            await msg.answer(text="Некорректная ссылка")
-            logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+        except InsufficientFundsException:
+            await msg.answer(text="Недостаточно 🧲")
     else:
         await msg.answer(text="Некорректная ссылка")
         logging.info(f"{msg.from_user.id} - указал кривую ссылку")
