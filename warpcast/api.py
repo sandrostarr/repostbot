@@ -48,14 +48,22 @@ def get_casts_from_user(
 
 def get_followers(
         username: str,
+        cursor: str = '',
+        limit: int = 100,
 ):
     fid = get_fid_from_username(username)
-    param = f"followers?fid={fid}"
+    param = f"followers?cursor={cursor}&fid={fid}&limit={limit}"
     try:
         response = requests.get(warp_api + param)
         followers = response.json()
+        followers_ids = [follower['fid'] for follower in followers['result']['users']]
 
-        return followers
+        try:
+            cursor = (followers['next']['cursor'])
+        except:
+            cursor = None
+
+        return followers_ids, cursor
     except:
         return None
 

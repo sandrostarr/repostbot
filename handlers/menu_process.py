@@ -42,8 +42,7 @@ async def task_complete(
             if await check_recast_existence(cast_hash=task.cast_hash, fid=user.fid):
                 check_success = True
         elif task.type == 'FOLLOW':
-            # TODO доделать
-            if await check_follow_existence(cast_hash=task.cast_hash, fid=user.fid):
+            if await check_follow_existence(username=task.url, fid=user.fid):
                 check_success = True
 
         if check_success:

@@ -210,7 +210,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         await call.answer()
     elif not tasks:
         answer, reply_markup = await get_menu_content(session, level=0)
-        answer = f" Похожу что ты выполнил все задания {callback_data.task_type}. Выбери другую категорию."
+        answer = f" Похоже, что ты выполнил все задания {callback_data.task_type}. Выбери другую категорию."
 
         await call.message.edit_text(text=answer,
                                      reply_markup=reply_markup)
@@ -347,7 +347,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                     session=session,
                     user_id=user.id,
                     task_type=task_type,
-                    url=task_url,
+                    url=task_url.replace("https://warpcast.com/", ""),
                     price=task_price,
                     actions_count=actions_amount,
                 )
