@@ -2,6 +2,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram.types import Message
 from database.models import User, Task, TaskAction
+from errors.InsufficientFundsException import InsufficientFundsException
 
 
 async def orm_add_user(session: AsyncSession, msg: Message):
@@ -62,6 +63,10 @@ async def orm_top_up_user_balance_by_user_id(session: AsyncSession, user_id: int
 
 async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balance_change: int):
     user = await orm_get_user(session=session, msg=msg)
+
+    if user.balance < balance_change:
+        raise InsufficientFundsException
+
     query = update(User).where(User.telegram_id == msg.from_user.id).values(
         balance=user.balance - balance_change)
     await session.execute(query)
