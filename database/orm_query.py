@@ -37,6 +37,12 @@ async def orm_get_user_by_tg_id(session: AsyncSession, telegram_id: int):
     return result.scalar()
 
 
+async def orm_get_user_by_username(session: AsyncSession, username: str):
+    query = select(User).where(User.username == username)
+    result = await session.execute(query)
+    return result.scalar()
+
+
 # TODO в дальнейшем апдейт пользовательских данных можно будет собрать в один метод, сейчас пока похер
 async def orm_update_user_fid(session: AsyncSession, msg: Message, fid: int):
     query = update(User).where(User.telegram_id == msg.from_user.id).values(
@@ -51,6 +57,14 @@ async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance_c
         balance=user.balance + balance_change)
     await session.execute(query)
     await session.commit()
+
+async def orm_top_up_user_balance_tg_ig(session: AsyncSession, telegram_id: int, balance_change: int):
+    user = await orm_get_user_by_tg_id(session=session, telegram_id=telegram_id)
+    query = update(User).where(User.telegram_id == telegram_id).values(
+        balance=user.balance + balance_change)
+    await session.execute(query)
+    await session.commit()
+
 
 
 async def orm_top_up_user_balance_by_user_id(session: AsyncSession, user_id: int, balance_change: int):
