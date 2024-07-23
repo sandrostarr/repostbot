@@ -84,7 +84,10 @@ async def orm_get_tasks(session: AsyncSession, task_type: str, user_id: int, not
             (Task.type == task_type) &
             (Task.user_id != user_id) &
             (Task.is_completed == False) &
-            (TaskAction.id == None)
+            (
+                    (TaskAction.id == None) |
+                    (TaskAction.is_verified == False)
+            )
         ))
     else:
         query = select(Task).where(Task.type == task_type)
@@ -139,6 +142,15 @@ async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int)
     session.add(obj)
     await session.commit()
     return obj
+
+
+async def orm_get_task_action(session: AsyncSession, user_id: int, task_id: int):
+    query = select(TaskAction).where(
+        (TaskAction.user_id == user_id) &
+        (TaskAction.task_id == task_id)
+    )
+    result = await session.execute(query)
+    return result.scalar()
 
 
 async def orm_verify_task_action(session: AsyncSession, task_action: TaskAction):

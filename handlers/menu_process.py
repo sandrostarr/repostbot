@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Task, User
 from database.orm_query import (orm_add_task_action, orm_top_up_user_balance_by_user_id, orm_verify_task_action,
-                                increase_task_actions_completed_count)
+                                increase_task_actions_completed_count, orm_get_task_action)
 from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 from utils.functions import get_action_earning
 from handlers.action_checker import check_like_existence, check_recast_existence, check_follow_existence
@@ -23,16 +23,16 @@ async def task_complete(
         page: int = 0,
         url: str | None = None,
         approve: bool = False,
+        is_last_task: bool = False,
 ):
     answer = (f"Переходи по ссылке и {task.type}\n\n"
               f"{url}")
     if approve:
         action_earning = get_action_earning(task.type)
-        task_action = await orm_add_task_action(
-            session=session,
-            user_id=user.id,
-            task_id=task.id,
-        )
+
+        task_action = await orm_get_task_action(session=session, user_id=user.id, task_id=task.id)
+        if task_action is None:
+            task_action = await orm_add_task_action(session=session, user_id=user.id, task_id=task.id)
 
         check_success = False
         if task.type == 'LIKE':
@@ -59,8 +59,9 @@ async def task_complete(
         task_id=task.id,
         page=page,
         url=url,
+        sizes=(1,),
         approve=approve,
-        sizes=(1,)
+        is_last_task=is_last_task,
     )
 
     return answer, kb
@@ -68,12 +69,12 @@ async def task_complete(
 
 # покупка токенов пока заглушка
 async def buy_token(
-        sessioon: AsyncSession,
+        session: AsyncSession,
         level: int,
 ):
     answer = f"Только в ручном режиме, напиши @username"
     kb = buy_token_kb(
-        level=level
+        level=level,
     )
 
     return answer, kb
@@ -86,12 +87,13 @@ async def get_menu_content(
         user: User | None = None,
         page: int = 0,
         url: str | None = None,
-        approve: bool = False
+        approve: bool = False,
+        is_last_task: bool = False,
 
 ):
     if level == 0:
         return await task_menu(session, level)
     elif level == 1:
-        return await task_complete(session, level, task, user, page, url, approve)
+        return await task_complete(session, level, task, user, page, url, approve, is_last_task)
     elif level == 7:
         return await buy_token(session, level)
