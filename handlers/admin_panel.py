@@ -30,10 +30,10 @@ async def top_up_start(msg: Message, state: FSMContext):
 async def top_up_get_id(msg: Message, session: AsyncSession, state: FSMContext):
     if msg.forward_from:
         logging.info(f"{msg.from_user.id} - Выбрал Юзера через отправленное сообщение")
-        user_id = msg.forward_from.id
+        telegram_id = msg.forward_from.id
         try:
-            await q.orm_get_user_by_tg_id(session=session, telegram_id=user_id)
-            await state.update_data(USER_ID=user_id)
+            await q.orm_get_user_by_tg_id(session=session, telegram_id=telegram_id)
+            await state.update_data(USER_ID=telegram_id)
             answer = ("Сколько начислить?")
             await msg.answer(text=answer)
             await state.set_state(AdminTopUp.GET_TOP_UP)
@@ -43,13 +43,19 @@ async def top_up_get_id(msg: Message, session: AsyncSession, state: FSMContext):
 
     #TODO: сделать проверку в БД по username
     elif msg.text.startswith("@"):
-        username = msg.text
-        await state.update_data(USER_NAME=username)
-        answer = ("Сколько начислить?")
-        await msg.answer(text=answer)
-        await state.set_state(AdminTopUp.GET_TOP_UP)
+        username = msg.text.strip('@')
+        try:
+            user = await q.orm_get_user_by_username(session=session, username=username)
+            print(user.id)
+            await state.update_data(USER_ID=user.telegram_id)
+            answer = ("Сколько начислить?")
+            await msg.answer(text=answer)
+            await state.set_state(AdminTopUp.GET_TOP_UP)
+        except:
+            answer = "такой не найден юзер по нику"
+            await msg.answer(text=answer)
     else:
-        answer = ("Ебалай перешли сообщение от пользователя")
+        answer = ("Ебалай шо то не то")
         await msg.answer(text=answer)
 
 
@@ -66,11 +72,12 @@ async def top_up_get_value(msg: Message, state: FSMContext):
 async def top_up_get_approve(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Апрув добавлен")
     data = await state.get_data()
-    user_id = data["USER_ID"]
+    telegram_id = data["USER_ID"]
     top_up_sum = data["TUP_UP_SUM"]
     proof = msg.text
-    answer = (f"Пополнил {user_id} на {top_up_sum} 🧲\n"
+    answer = (f"Пополнил {telegram_id} на {top_up_sum} 🧲\n"
               f"PROOF: {proof}")
+    await q.orm_top_up_user_balance_tg_ig(session=session,telegram_id=int(telegram_id),balance_change=int(top_up_sum))
     await msg.answer(text=answer)
     await state.clear()
 
