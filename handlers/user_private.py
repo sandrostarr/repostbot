@@ -23,9 +23,12 @@ from warpcast import api
 
 
 load_dotenv(find_dotenv())
+admin1 = os.getenv('ADMIN_ID1')
+admin2 = os.getenv('ADMIN_ID2')
+
 admins = [
-    os.getenv('ADMIN_ID1'),
-    os.getenv('ADMIN_ID2')
+    admin1,
+    admin2,
 ]
 user_private_router = Router()
 
@@ -35,9 +38,9 @@ user_private_router = Router()
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Запущен бот или перезагружен")
     await state.clear()
-    print(admins)
+
     #админ панель
-    if msg.from_user.id == 176536188:
+    if str(msg.from_user.id) in admins:
        answer = (f"Что надо хозяин?")
        await msg.answer(text=answer, reply_markup=rkb.create_kb("Пополнить USER",
                                                                 "Заказать накрутку",
@@ -403,7 +406,7 @@ async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMC
                 ind = "🟡"
             else:
                 ind = "🔴"
-            answer = answer + f"{ind} {task.type} {task.actions_completed} / {task.actions_count} - <a href = '{task.url}'> ссылка </a>\n"
+            answer = answer + f"{ind} {task.type} - <a href = '{task.url}'> ссылка </a>\n"
     else:
         answer = answer + f"Нет заказов"
 
