@@ -46,7 +46,8 @@ def complete_task_kb(
         page: int,
         url: str,
         sizes: tuple[int] = (1,),
-        approve: bool = False
+        approve: bool = False,
+        is_last_task: bool = False,
 
 ):
     keyboard = InlineKeyboardBuilder()
@@ -60,13 +61,13 @@ def complete_task_kb(
                                                                          page=page,
                                                                          task_id=task_id,
                                                                          approve=True).pack()))
-
-    keyboard.add(InlineKeyboardButton(text='СЛЕД. ЗАДАНИЕ',
-                                      callback_data=MenuEarnCallback(level=1,
-                                                                     task_type=task_type,
-                                                                     page=page + 1,
-                                                                     approve=False,
-                                                                     ).pack()))
+    if not is_last_task:
+        keyboard.add(InlineKeyboardButton(text='СЛЕДУЮЩЕЕ ЗАДАНИЕ',
+                                          callback_data=MenuEarnCallback(level=1,
+                                                                         task_type=task_type,
+                                                                         page=page + 1,
+                                                                         approve=False,
+                                                                         ).pack()))
 
     keyboard.add(InlineKeyboardButton(text='НАЗАД',
                                       callback_data=MenuEarnCallback(level=0,

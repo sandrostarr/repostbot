@@ -206,6 +206,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
             page=page,
             url=f"https://warpcast.com/" + task.url,
             approve=callback_data.approve,
+            is_last_task=len(tasks) == 1,
         )
 
         await call.message.edit_text(text=str(answer), reply_markup=reply_markup)
