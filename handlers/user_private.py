@@ -35,7 +35,6 @@ user_private_router = Router()
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Запущен бот или перезагружен")
     await state.clear()
-    print(admins)
     #админ панель
     if str(msg.from_user.id) in admins:
        answer = (f"Что надо хозяин?")
@@ -326,7 +325,6 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                     cast_hash = api.get_cast_hash(username, hash_prefix)
                     if cast_hash:
                         creator_fid = api.get_fid_from_username(username=username)
-                        await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                         await q.orm_add_task(
                             session=session,
                             user_id=user.id,
@@ -338,7 +336,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                             actions_count=actions_amount,
 
                         )
-
+                        await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                         answer = (f"Задание создано:\n\n"
                                   f"Заказ: {task_type}\n"
                                   f"Количество: {actions_amount}\n"
@@ -357,7 +355,6 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                 if task_type == "FOLLOW":
                     username = get_username_from_url(check_link)
                     creator_fid = api.get_fid_from_username(username=username)
-                    await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                     await q.orm_add_task(
                         session=session,
                         user_id=user.id,
@@ -367,7 +364,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                         price=task_price,
                         actions_count=actions_amount,
                     )
-
+                    await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                     answer = (f"Задание создано:\n\n"
                               f"Заказ: {task_type}\n"
                               f"Количество: {actions_amount}\n"

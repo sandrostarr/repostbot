@@ -63,12 +63,11 @@ def get_cast_hash(
     # except:
     #     return None
 
-print(str(get_cast_hash(username='0x0nion',hash_prefix='0x3a65d56d')))
-
 
 #исправлено
 def get_followers(
-        username: str,
+        username: str = '',
+        creator_fid: int = 0
 ):
     fid = get_fid_from_username(username)
     param = f"linksByTargetFid?target_fid={fid}"
