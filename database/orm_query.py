@@ -137,6 +137,7 @@ async def orm_get_tasks_by_user_id(session: AsyncSession, user_id: int):
 async def orm_add_task(
         session: AsyncSession,
         user_id: int,
+        creator_fid: int,
         task_type: str,
         url: str,
         price: int,
@@ -145,6 +146,7 @@ async def orm_add_task(
 ):
     obj = Task(
         user_id=user_id,
+        creator_fid=creator_fid,
         type=task_type,
         url=url,
         cast_hash=cast_hash,

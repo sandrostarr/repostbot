@@ -14,7 +14,7 @@ class User(Base):
     telegram_id: Mapped[int] = mapped_column(nullable=False)
     username: Mapped[str] = mapped_column(nullable=True)
     fid: Mapped[int] = mapped_column(nullable=True, unique=True)
-    balance: Mapped[int] = mapped_column(nullable=True, default=0)
+    balance: Mapped[int] = mapped_column(nullable=True, default=100)
 
 
 class Task(Base):
@@ -22,6 +22,7 @@ class Task(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(nullable=False)
+    creator_fid: Mapped[int] = mapped_column(nullable=False)
     type: Mapped[str] = mapped_column(nullable=False)
     url: Mapped[str] = mapped_column(nullable=False)
     cast_hash: Mapped[str] = mapped_column(nullable=True)
@@ -37,5 +38,6 @@ class TaskAction(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     task_id: Mapped[int] = mapped_column(nullable=False)
     user_id: Mapped[int] = mapped_column(nullable=False)
+    user_fid: Mapped[int] = mapped_column(nullable=False)
     is_completed: Mapped[bool] = mapped_column(nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(nullable=False, default=False)

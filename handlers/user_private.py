@@ -37,7 +37,7 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     await state.clear()
     print(admins)
     #админ панель
-    if msg.from_user.id == 176536188:
+    if str(msg.from_user.id) in admins:
        answer = (f"Что надо хозяин?")
        await msg.answer(text=answer, reply_markup=rkb.create_kb("Пополнить USER",
                                                                 "Заказать накрутку",
@@ -314,10 +314,10 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
     actions_amount = data['ACTIONS_AMOUNT']
     task_price = data['TASK_PRICE']
     task_url = msg.text
+
     if task_url.lower().startswith("https://warpcast.com/"):
         check_link = task_url[len("https://warpcast.com/"):]
         slash_index = check_link.find("/")
-
         try:
             if slash_index != -1:
                 hash_prefix = check_link[slash_index + 1:]
@@ -325,16 +325,18 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                     username = get_username_from_url(check_link)
                     cast_hash = api.get_cast_hash(username, hash_prefix)
                     if cast_hash:
-
+                        creator_fid = api.get_fid_from_username(username=username)
                         await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                         await q.orm_add_task(
                             session=session,
                             user_id=user.id,
+                            creator_fid=creator_fid,
                             task_type=task_type,
                             url=task_url.replace("https://warpcast.com/", ""),
+                            cast_hash=cast_hash,
                             price=task_price,
                             actions_count=actions_amount,
-                            cast_hash=cast_hash,
+
                         )
 
                         answer = (f"Задание создано:\n\n"
@@ -346,18 +348,20 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                         await msg.answer(text=answer)
                     else:
                         await msg.answer(text="Не нашел пост")
-                        logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+                        logging.info(f"{msg.from_user.id} - указал неверную ссылку")
 
                 else:
                     await msg.answer(text="Некорректная ссылка")
                     logging.info(f"{msg.from_user.id} - указал кривую ссылку")
             elif len(check_link) != 0:
                 if task_type == "FOLLOW":
-
+                    username = get_username_from_url(check_link)
+                    creator_fid = api.get_fid_from_username(username=username)
                     await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
                     await q.orm_add_task(
                         session=session,
                         user_id=user.id,
+                        creator_fid=creator_fid,
                         task_type=task_type,
                         url=task_url.replace("https://warpcast.com/", ""),
                         price=task_price,
@@ -403,7 +407,7 @@ async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMC
                 ind = "🟡"
             else:
                 ind = "🔴"
-            answer = answer + f"{ind} {task.type} {task.actions_completed} / {task.actions_count} - <a href = '{task.url}'> ссылка </a>\n"
+            answer = answer + f"{ind} {task.type} - <a href = '{task.url}'> ссылка </a>\n"
     else:
         answer = answer + f"Нет заказов"
 
