@@ -1,3 +1,5 @@
+import time
+
 import requests
 from requests.exceptions import Timeout, ConnectionError
 
@@ -14,6 +16,18 @@ def get_fid_from_username(
         fid = response.json()['result']['user']['fid']
 
         return fid
+    except:
+        return None
+
+def get_followers_number(
+        username: str,
+):
+    param = f"user-by-username?username={username}"
+    try:
+        response = requests.get(warp_api + param)
+        follower_count = response.json()['result']['user']['followerCount']
+
+        return follower_count
     except:
         return None
 
@@ -49,7 +63,7 @@ def get_casts_from_user(
 def get_followers(
         username: str,
         cursor: str = '',
-        limit: int = 100,
+        limit: int = 50,
 ):
     fid = get_fid_from_username(username)
     param = f"followers?cursor={cursor}&fid={fid}&limit={limit}"
@@ -99,7 +113,6 @@ def get_cast_recasters(
         response = requests.get(warp_api + param)
         recasters = response.json()
         recasters_fids = [user['fid'] for user in recasters['result']['users']]
-
         try:
             cursor = (recasters['next']['cursor'])
         except:
