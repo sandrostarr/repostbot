@@ -67,7 +67,7 @@ async def top_up_get_value(msg: Message, state: FSMContext):
     await msg.answer(text=answer)
     await state.set_state(AdminTopUp.GET_APPROVE)
 
-#TODO: добавить взаимодействие с БД
+
 @admin_route.message(AdminTopUp.GET_APPROVE)
 async def top_up_get_approve(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Апрув добавлен")

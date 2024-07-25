@@ -14,7 +14,8 @@ import database.orm_query as q
 import logging
 
 from errors.InsufficientFundsException import InsufficientFundsException
-from utils.functions import is_hex_string
+from errors.DBRequiresException import DBRequiresException
+from utils.functions import is_hex_string, get_t_type, get_answer_t
 from assets.FSMClass import AddFid, CreateTask
 from handlers.menu_process import get_menu_content
 from utils.functions import is_number, get_action_price, get_username_from_url
@@ -109,7 +110,8 @@ async def show_profile_data(msg: Message, session: AsyncSession, state: FSMConte
 
     answer = (f"Hola {msg.from_user.full_name}\n\n"
               f"FID: {user.fid}\n\n"
-              f"Баланс: {user.balance} 🧲")
+              f"Баланс: {user.balance} 🧲\n"
+              f"🥶: {user.freeze_balance} 🧲")
 
     if user.fid is None:
         kb = ikb.create_callback_ikb(btns={
@@ -203,6 +205,7 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
             page = 0
         else:
             task = tasks[page]
+
         answer, reply_markup = await get_menu_content(
             session,
             level=callback_data.level,
@@ -219,7 +222,6 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
     elif not tasks:
         answer, reply_markup = await get_menu_content(session, level=0)
         answer = f" Похоже, что ты выполнил все задания {callback_data.task_type}. Выбери другую категорию."
-
         await call.message.edit_text(text=answer,
                                      reply_markup=reply_markup)
         await call.answer()
@@ -234,9 +236,9 @@ async def create_task(msg: Message, state: FSMContext):
     await state.set_state(CreateTask.TASK_TYPE)
     answer = f"Выбери, что будем накручивать?"
     await msg.answer(answer,
-                     reply_markup=ikb.create_callback_ikb(btns={"LIKE": "LIKE",
-                                                                "RECAST": "RECAST",
-                                                                "FOLLOW": "FOLLOW",
+                     reply_markup=ikb.create_callback_ikb(btns={"LIKE": 'LIKE',
+                                                                "RECAST": 'RECAST',
+                                                                "FOLLOW": 'FOLLOW',
 
                                                                 }, sizes=(3,)))
 
@@ -244,24 +246,16 @@ async def create_task(msg: Message, state: FSMContext):
 @user_private_router.callback_query(CreateTask.TASK_TYPE)
 async def get_type_of_task(call: CallbackQuery, state: FSMContext):
     logging.info(f"{call.from_user.id} - меню тип задания")
-    answer = ''
+
     action_price = get_action_price(call.data)
+    t_type = get_t_type(call.data)
+
     await state.update_data(TASK_PRICE=action_price)
-    if call.data == "LIKE":
-        answer = (f"Сколько лайков нужно накрутить?\n\n"
-                  f"Стоимость одного лайка = {action_price} 🧲\n\n"
-                  f"<i>*в бета тесте нельзя заказать менее 5 и более 20 лайков за 1 заказ</i>")
-        await state.update_data(TASK_TYPE="LIKE")
-    if call.data == "RECAST":
-        answer = (f"Сколько рекастов нужно сделать?\n\n"
-                  f"Стоимость одного рекаста = {action_price} 🧲\n\n"
-                  f"<i>*в бета тесте нельзя заказать менее 5 и более 20 рекастов за 1 заказ</i>")
-        await state.update_data(TASK_TYPE="RECAST")
-    if call.data == "FOLLOW":
-        answer = (f"Сколько подписчиков нужно сделать?\n\n"
-                  f"Стоимость одного подписчика = {action_price} 🧲\n\n"
-                  f"<i>*в бета тесте нельзя заказать менее 5 и более 20 подписчиков за 1 заказ</i>")
-        await state.update_data(TASK_TYPE="FOLLOW")
+    await state.update_data(TASK_TYPE=call.data)
+
+    answer = (f"Сколько {t_type}ов нужно накрутить?\n\n"
+              f"Стоимость одного {t_type}а = {action_price} 🧲\n\n"
+              f"<i>*в бета тесте нельзя заказать менее 5 и более 20 {t_type}ов за 1 заказ</i>")
 
     await state.set_state(CreateTask.TASK_ACTIONS_AMOUNT)
     await call.message.edit_text(text=answer)
@@ -281,22 +275,14 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
         elif user.balance >= int(actions_amount) * get_action_price(task_type):
             task_price = actions_amount * data['TASK_PRICE']
             await state.update_data(TASK_PRICE=task_price)
-            if task_type == "FOLLOW":
-                task_link = "профиль"
-                answer = (f"Отправьте ссылку на {task_link}\n"
-                          f"Стоимость услуги составит {task_price} 🧲\n"
-                          f"Пример:<i> https://warpcast.com/vitalik.eth </i>")
-                await state.update_data(ACTIONS_AMOUNT=actions_amount)
-                await state.set_state(CreateTask.TASK_URL)
-                await msg.answer(text=answer)
-            else:
-                task_link = "пост"
-                answer = (f"Отправьте ссылку на {task_link}\n"
-                          f"Стоимость услуги составит {task_price} 🧲\n"
-                          f"Пример: <i> https://warpcast.com/vitalik.eth/0xf2fb9ef7 </i>")
-                await state.update_data(ACTIONS_AMOUNT=actions_amount)
-                await state.set_state(CreateTask.TASK_URL)
-                await msg.answer(text=answer)
+            answer_t = get_answer_t(task_type=task_type)
+            answer = (f"Отправьте ссылку на {answer_t[0]}\n\n"
+                      f"Стоимость услуги составит {task_price} 🧲\n\n"
+                      f"Пример:<i> {answer_t[1]} </i>")
+            await state.update_data(ACTIONS_AMOUNT=actions_amount)
+            await state.set_state(CreateTask.TASK_URL)
+            await msg.answer(text=answer)
+
         else:
             await msg.answer(text="Недостаточно 🧲")
             logging.info(f"{msg.from_user.id} - нет баланса")
@@ -307,24 +293,31 @@ async def get_number_to_task(msg: Message, state: FSMContext, session: AsyncSess
 @user_private_router.message(CreateTask.TASK_URL)
 async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSession):
     logging.info(f"{msg.from_user.id} - создаем заказ")
+    await msg.answer(text="Проверяю ссылку")
+    task_url = msg.text
+    if not task_url.lower().startswith("https://warpcast.com/"):
+        await msg.answer(text="Некорректная ссылка. Проверь что начинается с 'https://warpcast.com/'")
+        return
+
     user = await q.orm_get_user(session=session, msg=msg)
     data = await state.get_data()
+
     task_type = data['TASK_TYPE']
     actions_amount = data['ACTIONS_AMOUNT']
     task_price = data['TASK_PRICE']
-    task_url = msg.text
 
-    if task_url.lower().startswith("https://warpcast.com/"):
-        check_link = task_url[len("https://warpcast.com/"):]
-        slash_index = check_link.find("/")
-        try:
-            if slash_index != -1:
-                hash_prefix = check_link[slash_index + 1:]
-                if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
-                    username = get_username_from_url(check_link)
-                    cast_hash = api.get_cast_hash(username, hash_prefix)
-                    if cast_hash:
-                        creator_fid = api.get_fid_from_username(username=username)
+    check_link = task_url[len("https://warpcast.com/"):]
+    slash_index = check_link.find("/")
+    username = get_username_from_url(check_link)
+    creator_fid = api.get_fid_from_username(username=username)
+
+    try:
+        if slash_index != -1:
+            hash_prefix = check_link[slash_index + 1:]
+            if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
+                cast_hash = api.get_casts_from_user(username=username, hash_prefix=hash_prefix)
+                if cast_hash:
+                    try:
                         await q.orm_add_task(
                             session=session,
                             user_id=user.id,
@@ -337,24 +330,26 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
 
                         )
                         await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
-                        answer = (f"Задание создано:\n\n"
-                                  f"Заказ: {task_type}\n"
-                                  f"Количество: {actions_amount}\n"
-                                  f"Стоимость: {task_price} 🧲\n"
-                                  f"Ссылка: {task_url}")
-                        await state.clear()
-                        await msg.answer(text=answer)
-                    else:
-                        await msg.answer(text="Не нашел пост")
-                        logging.info(f"{msg.from_user.id} - указал неверную ссылку")
+                    except DBRequiresException as e:
+                        await msg.answer(text='Задание не создалось попробуйте позже.')
+                        logging.warning(e)
 
+                    answer = (f"Задание создано:\n\n"
+                              f"Заказ: {task_type}\n"
+                              f"Количество: {actions_amount}\n"
+                              f"Стоимость: {task_price} 🧲\n"
+                              f"Ссылка: {task_url}")
+                    await state.clear()
+                    await msg.answer(text=answer)
                 else:
-                    await msg.answer(text="Некорректная ссылка")
-                    logging.info(f"{msg.from_user.id} - указал кривую ссылку")
-            elif len(check_link) != 0:
-                if task_type == "FOLLOW":
-                    username = get_username_from_url(check_link)
-                    creator_fid = api.get_fid_from_username(username=username)
+                    await msg.answer(text="Не удалось найти пост.")
+                    logging.info(f"{msg.from_user.id} - указал некорректную ссылку")
+            else:
+                await msg.answer(text="Некорректная ссылка")
+                logging.info(f"{msg.from_user.id} - указал некорректную ссылку")
+        elif len(check_link) != 0:
+            if task_type == "FOLLOW":
+                try:
                     await q.orm_add_task(
                         session=session,
                         user_id=user.id,
@@ -365,24 +360,28 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                         actions_count=actions_amount,
                     )
                     await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
-                    answer = (f"Задание создано:\n\n"
-                              f"Заказ: {task_type}\n"
-                              f"Количество: {actions_amount}\n"
-                              f"Стоимость: {task_price} 🧲\n"
-                              f"Ссылка: {task_url}")
-                    await state.clear()
-                    await msg.answer(text=answer)
-                else:
-                    await msg.answer(text="Некорректная ссылка")
-                    logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+                except DBRequiresException as e:
+                    await msg.answer(text='Задание не создалось попробуйте позже.')
+                    logging.warning(e)
+
+                answer = (f"Задание создано:\n\n"
+                          f"Заказ: {task_type}\n"
+                          f"Количество: {actions_amount}\n"
+                          f"Стоимость: {task_price} 🧲\n"
+                          f"Ссылка: {task_url}")
+                await state.clear()
+                await msg.answer(text=answer)
             else:
                 await msg.answer(text="Некорректная ссылка")
-                logging.info(f"{msg.from_user.id} - указал кривую ссылку")
-        except InsufficientFundsException:
-            await msg.answer(text="Недостаточно 🧲")
-    else:
-        await msg.answer(text="Некорректная ссылка")
-        logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+                logging.info(f"{msg.from_user.id} - указал не корректную ссылку")
+
+        else:
+            await msg.answer(text="Некорректная ссылка")
+            logging.info(f"{msg.from_user.id} - указал не корректную ссылку")
+
+    except InsufficientFundsException:
+        await msg.answer(text="Недостаточно 🧲")
+
 
 
 # ################################## TASK_LIST ###################################
