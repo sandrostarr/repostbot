@@ -19,6 +19,24 @@ def get_action_price(action_type: str):
     return actions_prices[action_type]
 
 
+def get_answer_t(task_type: str):
+    answers_ts = {
+        'LIKE': ['пост','https://warpcast.com/vitalik.eth/0xf2fb9ef7'],
+        'RECAST': ['пост','https://warpcast.com/vitalik.eth/0xf2fb9ef7'],
+        'FOLLOW': ['профиль','https://warpcast.com/vitalik.eth'],
+    }
+    return answers_ts[task_type]
+
+
+
+def get_t_type(task_type: str):
+    task_types = {
+        'LIKE': 'лайк',
+        'RECAST': 'рекаст',
+        'FOLLOW': 'подпичик',
+    }
+    return task_types[task_type]
+
 def get_action_earning(action_type: str):
     actions_earnings = {
         'LIKE': 1,
