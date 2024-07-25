@@ -110,7 +110,8 @@ async def show_profile_data(msg: Message, session: AsyncSession, state: FSMConte
 
     answer = (f"Hola {msg.from_user.full_name}\n\n"
               f"FID: {user.fid}\n\n"
-              f"Баланс: {user.balance} 🧲")
+              f"Баланс: {user.balance} 🧲\n"
+              f"🥶: {user.freeze_balance} 🧲")
 
     if user.fid is None:
         kb = ikb.create_callback_ikb(btns={
@@ -372,11 +373,11 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                 await msg.answer(text=answer)
             else:
                 await msg.answer(text="Некорректная ссылка")
-                logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+                logging.info(f"{msg.from_user.id} - указал не корректную ссылку")
 
         else:
             await msg.answer(text="Некорректная ссылка")
-            logging.info(f"{msg.from_user.id} - указал кривую ссылку")
+            logging.info(f"{msg.from_user.id} - указал не корректную ссылку")
 
     except InsufficientFundsException:
         await msg.answer(text="Недостаточно 🧲")

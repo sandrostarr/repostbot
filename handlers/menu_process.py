@@ -1,8 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models import Task, User
-from database.orm_query import (orm_add_task_action, orm_top_up_user_balance_by_user_id, orm_verify_task_action,
-                                increase_task_actions_completed_count, orm_get_task_action)
+import database.orm_query as q
 from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 from utils.functions import get_action_earning
 from handlers.action_checker import check_like_existence, check_recast_existence, check_follow_existence
@@ -30,28 +29,31 @@ async def task_complete(
     if approve:
         action_earning = get_action_earning(task.type)
 
-        task_action = await orm_get_task_action(session=session, user_id=user.id, task_id=task.id)
+        task_action = await q.orm_get_task_action(session=session, user_id=user.id, task_id=task.id)
         if task_action is None:
-            task_action = await orm_add_task_action(session=session, user_id=user.id, task_id=task.id)
+            task_action = await q.orm_add_task_action(session=session, user_id=user.id, task_id=task.id)
 
-        check_success = False
-        if task.type == 'LIKE':
-            if await check_like_existence(cast_hash=task.cast_hash, fid=user.fid):
-                check_success = True
-        elif task.type == 'RECAST':
-            if await check_recast_existence(cast_hash=task.cast_hash, fid=user.fid):
-                check_success = True
-        elif task.type == 'FOLLOW':
-            if await check_follow_existence(username=task.url, fid=user.fid):
-                check_success = True
+        await q.orm_top_up_user_freeze_balance_by_user_id(session=session,user_id=user.id, balance_change=action_earning)
+        await q.orm_verify_task_action(session=session, task_action=task_action)
+        await q.increase_task_actions_completed_count(session=session, task=task)
+        # check_success = False
+        # if task.type == 'LIKE':
+        #     if await check_like_existence(cast_hash=task.cast_hash, fid=user.fid):
+        #         check_success = True
+        # elif task.type == 'RECAST':
+        #     if await check_recast_existence(cast_hash=task.cast_hash, fid=user.fid):
+        #         check_success = True
+        # elif task.type == 'FOLLOW':
+        #     if await check_follow_existence(username=task.url, fid=user.fid):
+        #         check_success = True
 
-        if check_success:
-            await orm_top_up_user_balance_by_user_id(session=session, user_id=user.id, balance_change=action_earning)
-            await orm_verify_task_action(session=session, task_action=task_action)
-            await increase_task_actions_completed_count(session=session, task=task)
-        else:
-            # TODO пока такую заглушку сделал. Возможно, надо как-то иначе сделать
-            answer = f"Задание не выполнено. Перейти к следующему"
+        # if check_success:
+        #     await orm_top_up_user_balance_by_user_id(session=session, user_id=user.id, balance_change=action_earning)
+        #     await orm_verify_task_action(session=session, task_action=task_action)
+        #     await increase_task_actions_completed_count(session=session, task=task)
+        # else:
+        #     # TODO пока такую заглушку сделал. Возможно, надо как-то иначе сделать
+        #     answer = f"Задание не выполнено. Перейти к следующему"
 
     kb = complete_task_kb(
         level=level,

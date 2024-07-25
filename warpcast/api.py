@@ -105,6 +105,7 @@ def get_followers(
         if target_fid is not None:
             if target_fid in followers_ids:
                 return True
+
         page_token = followers['nextPageToken']
         if not page_token:
             break

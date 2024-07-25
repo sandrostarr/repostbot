@@ -75,6 +75,14 @@ async def orm_top_up_user_balance_by_user_id(session: AsyncSession, user_id: int
     await session.commit()
 
 
+async def orm_top_up_user_freeze_balance_by_user_id(session: AsyncSession, user_id: int, balance_change: int):
+    user = await orm_get_user_by_id(session=session, user_id=user_id)
+    query = update(User).where(User.id == user_id).values(
+        freeze_balance=user.freeze_balance + balance_change)
+    await session.execute(query)
+    await session.commit()
+
+
 async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balance_change: int):
     user = await orm_get_user(session=session, msg=msg)
 
@@ -83,6 +91,29 @@ async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balanc
 
     query = update(User).where(User.telegram_id == msg.from_user.id).values(
         balance=user.balance - balance_change)
+    await session.execute(query)
+    await session.commit()
+
+
+async def orm_write_off_user_freeze_balance(session: AsyncSession, msg: Message, balance_change: int):
+    user = await orm_get_user(session=session, msg=msg)
+
+    if user.freeze_balance < balance_change:
+        raise InsufficientFundsException
+
+    query = update(User).where(User.telegram_id == msg.from_user.id).values(
+        freeze_balance=user.freeze_balance - balance_change)
+    await session.execute(query)
+    await session.commit()
+
+async def orm_write_off_user_freeze_balance(session: AsyncSession, msg: Message, balance_change: int):
+    user = await orm_get_user(session=session, msg=msg)
+
+    if user.freeze_balance < balance_change:
+        raise InsufficientFundsException
+
+    query = update(User).where(User.telegram_id == msg.from_user.id).values(
+        balance=user.freeze_balance - balance_change)
     await session.execute(query)
     await session.commit()
 
@@ -194,13 +225,3 @@ async def orm_verify_task_action(session: AsyncSession, task_action: TaskAction)
     await session.commit()
 
 
-# async def orm_get_task_actions(session: AsyncSession, not_verified: bool = True):
-#     if not_verified:
-#         query = select(TaskAction).where(
-#             (TaskAction.type == task_type) &
-#             (Task.is_completed == False)
-#         )
-#     else:
-#         query = select(Task).where(Task.type == task_type)
-#     result = await session.execute(query)
-#     return result.scalars().all()
