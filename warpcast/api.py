@@ -1,4 +1,4 @@
-import time
+import logging
 
 import requests
 from requests.exceptions import Timeout, ConnectionError
@@ -20,64 +20,98 @@ def get_fid_from_username(
         return None
 
 
-
-#исправлено
-def get_casts_from_user(
-        username: str,
-):
-    try:
-        fid = get_fid_from_username(username=username)
-        # param = f"profile-casts?fid={fid}"
-        #
-        # response = requests.get(warp_api + param)
-        #
-        # hash_list = [cast['hash'] for cast in response.json()['result']['casts']]
-
-        param = f"castsByFid?fid={fid}"
-        response = requests.get(warp_api_node + param)
-        cast_list = response.json()
-        hash_list = [message['hash'] for message in cast_list['messages']]
-        return hash_list
-    except:
-        return None
-
-# print(get_casts_from_user("0x0nion"))
-
-#исправлено
 def get_cast_hash(
-        username: str,
+        hash_list: list,
         hash_prefix: str,
 ):
     try:
-        hash_list = get_casts_from_user(username=username)
-        cast_hash_list = [address for address in hash_list if address.startswith(hash_prefix)]
+        cast_hash_list = [cast_hash for cast_hash in hash_list if cast_hash.startswith(hash_prefix)]
         cast_hash = ''.join(cast_hash_list)
         return cast_hash
     except:
         return None
-    # param = f"user-cast?username={username}&hashPrefix={hash_prefix}"
-    # try:
-    #     response = requests.get(warp_api + param)
-    #     cast_hash = response.json()['result']['cast']['hash']
-    #     return cast_hash
-    # except:
-    #     return None
+
+
+# исправлено
+
+def get_casts_from_user(
+        username: str,
+        hash_prefix: str = '',
+):
+    try:
+        try:
+            fid = get_fid_from_username(username=username)
+        except:
+            logging.warning("get_fid_from_username - не работает")
+            return None
+
+        param = f"castsByFid?fid={fid}&pageSize=1000"
+        hash_list = []
+
+        while True:
+            response = requests.get(warp_api_node + param)
+            if response.status_code != 200:
+                logging.warning(f"200 - {response}")
+                return None
+
+            cast_list = response.json()
+
+            hash_list.extend(message['hash'] for message in cast_list['messages'])
+
+            if hash_prefix:
+                cast_hash = get_cast_hash(hash_list=hash_list, hash_prefix=hash_prefix)
+                if cast_hash:
+                    return cast_hash
+
+            page_token = cast_list['nextPageToken']
+            if not page_token:
+                break
+            param = f"castsByFid?fid={fid}&pageSize=1000&pageToken={page_token}"
+        return hash_list
+    except:
+        logging.warning("get_casts_from_user - не работает")
+        return None
+
+
+# print(get_casts_from_user("0x0nion"))
+# print(get_casts_from_user(username="kevinmfer",hash_prefix='0x2dea8f8'))
 
 
 #исправлено
 def get_followers(
-        username: str = '',
-        creator_fid: int = 0
+        username: str | None = None,
+        creator_fid: int | None = None,
+        target_fid: int | None = None,
 ):
-    fid = get_fid_from_username(username)
-    param = f"linksByTargetFid?target_fid={fid}"
-    try:
+    if creator_fid is None:
+        try:
+            creator_fid = get_fid_from_username(username=username)
+        except:
+            logging.warning("get_fid_from_username - не работает")
+            return None
+
+    param = f"linksByTargetFid?target_fid={creator_fid}"
+    followers_ids = []
+
+    while True:
         response = requests.get(warp_api_node + param)
+        if response.status_code != 200:
+            logging.warning(f"200 - {response}")
+            return None
+
         followers = response.json()
-        followers_ids = [message['data']['fid'] for message in followers['messages']]
-        return followers_ids
-    except:
-        return None
+        followers_ids.extend(message['data']['fid'] for message in followers['messages'])
+
+        if target_fid is not None:
+            if target_fid in followers_ids:
+                return True
+        page_token = followers['nextPageToken']
+        if not page_token:
+            break
+        param = f"linksByTargetFid?target_fid={creator_fid}&pageSize=1000&pageToken={page_token}"
+    return followers_ids
+
+
 
 #исправил сразу проверяет есть ли лайк от пользователя или нет
 def get_cast_likers(
@@ -85,9 +119,7 @@ def get_cast_likers(
         fid_task_creator: int,
         fid_liker: int,
 
-
 ):
-
     try:
         param = f"reactionById?fid={fid_liker}&reaction_type=1&target_fid={fid_task_creator}&target_hash={cast_hash}"
         response = requests.get(warp_api_node + param)
@@ -96,7 +128,6 @@ def get_cast_likers(
         else:
             return False
     except:
-        print("None")
         return None
 
     #cтарый код
@@ -115,6 +146,7 @@ def get_cast_likers(
     # except:
     #     return None
 
+
 #рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
 def get_cast_recasters(
         cast_hash: str,
@@ -130,7 +162,6 @@ def get_cast_recasters(
         else:
             return False
     except:
-        print("None")
         return None
     #
     # param = f"cast-recasters?cursor={cursor}&castHash={cast_hash}&limit={limit}"
@@ -146,4 +177,3 @@ def get_cast_recasters(
     #     return recasters_fids, cursor
     # except:
     #     return None
-
