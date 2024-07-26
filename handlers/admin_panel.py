@@ -11,6 +11,8 @@ from assets.FSMClass import AdminTopUp, calcTokens
 
 from utils.functions import summ_result
 
+from bot_creator import bot
+
 admin_route = Router()
 
 
@@ -85,7 +87,7 @@ async def top_up_get_approve(msg: Message, session: AsyncSession, state: FSMCont
 # ################################## COUNT ###################################
 
 @admin_route.message(F.text == "Посчитать токены")
-async def calc_summ(msg: Message, session: AsyncSession, state: FSMContext):
+async def calc_summ(msg: Message, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Калькулятор токенов")
     await msg.delete()
     await state.clear()
@@ -95,7 +97,7 @@ async def calc_summ(msg: Message, session: AsyncSession, state: FSMContext):
 
 
 @admin_route.message(calcTokens.GET_VALUE)
-async def calc_summ_get_value(msg: Message, session: AsyncSession, state: FSMContext):
+async def calc_summ_get_value(msg: Message, state: FSMContext):
     logging.info(f"{msg.from_user.id} - get token value")
     await state.set_state(calcTokens.GET_CURRENCY)
     await state.update_data(VALUE=int(msg.text))
@@ -119,3 +121,12 @@ async def calc_summ_get_curr(call: CallbackQuery, state: FSMContext):
 
     await call.message.edit_text(text=answer)
     await state.clear()
+
+
+# ################################## ADMIN_CHAT ###################################
+
+
+
+
+
+

@@ -1,11 +1,16 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from bot_creator import bot
 from database.models import Task, User
 import database.orm_query as q
+from errors import DBRequiresException
 from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 from utils.functions import get_action_earning
 from handlers.action_checker import check_like_existence, check_recast_existence, check_follow_existence
 
+
+import keyboard.inline as ikb
 
 # основное меню для заданий
 async def task_menu(session, level):
@@ -32,28 +37,13 @@ async def task_complete(
         task_action = await q.orm_get_task_action(session=session, user_id=user.id, task_id=task.id)
         if task_action is None:
             task_action = await q.orm_add_task_action(session=session, user_id=user.id, task_id=task.id)
-
-        await q.orm_top_up_user_freeze_balance_by_user_id(session=session,user_id=user.id, balance_change=action_earning)
-        await q.orm_verify_task_action(session=session, task_action=task_action)
-        await q.increase_task_actions_completed_count(session=session, task=task)
-        # check_success = False
-        # if task.type == 'LIKE':
-        #     if await check_like_existence(cast_hash=task.cast_hash, fid=user.fid):
-        #         check_success = True
-        # elif task.type == 'RECAST':
-        #     if await check_recast_existence(cast_hash=task.cast_hash, fid=user.fid):
-        #         check_success = True
-        # elif task.type == 'FOLLOW':
-        #     if await check_follow_existence(username=task.url, fid=user.fid):
-        #         check_success = True
-
-        # if check_success:
-        #     await orm_top_up_user_balance_by_user_id(session=session, user_id=user.id, balance_change=action_earning)
-        #     await orm_verify_task_action(session=session, task_action=task_action)
-        #     await increase_task_actions_completed_count(session=session, task=task)
-        # else:
-        #     # TODO пока такую заглушку сделал. Возможно, надо как-то иначе сделать
-        #     answer = f"Задание не выполнено. Перейти к следующему"
+        try:
+            await q.orm_top_up_user_freeze_balance_by_user_id(session=session,user_id=user.id, balance_change=action_earning)
+            await q.orm_verify_task_action(session=session, task_action=task_action)
+            await q.increase_task_actions_completed_count(session=session, task=task)
+        except DBRequiresException as e:
+            await bot.send_message(chat_id='176536188', text=f"Проблема с BD {e}")
+            logging.warning(e)
 
     kb = complete_task_kb(
         level=level,
@@ -73,8 +63,16 @@ async def task_complete(
 async def buy_token(
         session: AsyncSession,
         level: int,
+        telegram_id: int = 0
 ):
+    # await bot.send_message(chat_id=176536188,
+    #                        text=f"user - хочет купить",
+    #                        reply_markup=ikb.create_callback_ikb(btns={
+    #                             " ответить: ": f'talk{telegram_id}'
+    #                        }
+    # ))
     answer = f"Только в ручном режиме, напиши @username"
+    # answer = f"не беси так и надо"
     kb = buy_token_kb(
         level=level,
     )
@@ -87,6 +85,7 @@ async def get_menu_content(
         level: int,
         task: Task | None = None,
         user: User | None = None,
+        telegram_id: int = 0,
         page: int = 0,
         url: str | None = None,
         approve: bool = False,
@@ -98,4 +97,4 @@ async def get_menu_content(
     elif level == 1:
         return await task_complete(session, level, task, user, page, url, approve, is_last_task)
     elif level == 7:
-        return await buy_token(session, level)
+        return await buy_token(session, level, telegram_id)

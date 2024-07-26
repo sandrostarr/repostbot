@@ -16,7 +16,7 @@ async def orm_add_user(session: AsyncSession, msg: Message):
 
 
 # TODO потом отрефакторить метод
-async def orm_get_user(session: AsyncSession, msg: Message, fid: int = None):
+async def orm_get_user(session: AsyncSession, msg: Message = None, fid: int = None):
     if fid is not None:
         query = select(User).where(User.fid == fid)
     else:
@@ -58,13 +58,13 @@ async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance_c
     await session.execute(query)
     await session.commit()
 
+
 async def orm_top_up_user_balance_tg_ig(session: AsyncSession, telegram_id: int, balance_change: int):
     user = await orm_get_user_by_tg_id(session=session, telegram_id=telegram_id)
     query = update(User).where(User.telegram_id == telegram_id).values(
         balance=user.balance + balance_change)
     await session.execute(query)
     await session.commit()
-
 
 
 async def orm_top_up_user_balance_by_user_id(session: AsyncSession, user_id: int, balance_change: int):
@@ -95,27 +95,18 @@ async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balanc
     await session.commit()
 
 
-async def orm_write_off_user_freeze_balance(session: AsyncSession, msg: Message, balance_change: int):
-    user = await orm_get_user(session=session, msg=msg)
+async def orm_write_off_user_freeze_balance(session: AsyncSession, fid: int, balance_change: int):
+    user = await orm_get_user(session=session, fid=fid)
 
     if user.freeze_balance < balance_change:
         raise InsufficientFundsException
 
-    query = update(User).where(User.telegram_id == msg.from_user.id).values(
+    query = update(User).where(User.fid == fid).values(
         freeze_balance=user.freeze_balance - balance_change)
     await session.execute(query)
     await session.commit()
 
-async def orm_write_off_user_freeze_balance(session: AsyncSession, msg: Message, balance_change: int):
-    user = await orm_get_user(session=session, msg=msg)
 
-    if user.freeze_balance < balance_change:
-        raise InsufficientFundsException
-
-    query = update(User).where(User.telegram_id == msg.from_user.id).values(
-        balance=user.freeze_balance - balance_change)
-    await session.execute(query)
-    await session.commit()
 
 
 # TODO можно разделить метод на 2 (получение всех заданий и получение заданий с фильтрами на выполнение, user_id и т.д.)
@@ -192,11 +183,25 @@ async def increase_task_actions_completed_count(session: AsyncSession, task: Tas
     actions_completed = task.actions_completed + 1
     task.actions_completed = actions_completed
 
-    if actions_completed >= task.actions_count:
+    if actions_completed > task.actions_count:
         task.is_completed = True
 
     session.add(task)
     await session.commit()
+
+
+async def decrease_task_actions_completed_count(session: AsyncSession, task: Task):
+    actions_completed = task.actions_completed - 1
+    task.actions_completed = actions_completed
+
+    if actions_completed >= task.actions_count:
+        task.is_completed = True
+    else:
+        task.is_completed = False
+
+    session.add(task)
+    await session.commit()
+
 
 
 async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int):
@@ -224,4 +229,9 @@ async def orm_verify_task_action(session: AsyncSession, task_action: TaskAction)
     session.add(task_action)
     await session.commit()
 
+
+async def orm_remove_complete_task_action(session: AsyncSession, task_action: TaskAction):
+    task_action.is_completed = False
+    session.add(task_action)
+    await session.commit()
 
