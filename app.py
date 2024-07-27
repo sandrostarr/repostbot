@@ -17,14 +17,16 @@ from handlers.admin_panel import admin_route
 from assets.bot_cmd_list import private
 from database.engine import create_db, drop_db, session_maker
 
+from bot_creator import bot
+
 # Ограничение запросов для разгрузки скрипта
 ALLOWED_UPDATES = ["message", "edited_message", "callback_query"]
 
-bot = Bot(token=os.getenv('BOT_TOKEN'),
-          default=DefaultBotProperties(
-              parse_mode=ParseMode.HTML
-          )
-          )
+# bot = Bot(token=os.getenv('BOT_TOKEN'),
+#           default=DefaultBotProperties(
+#               parse_mode=ParseMode.HTML
+#           )
+#           )
 dp = Dispatcher()
 
 dp.include_routers(user_private_router,
