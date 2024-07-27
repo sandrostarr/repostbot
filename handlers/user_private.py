@@ -189,7 +189,8 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         logging.info(f"{call.from_user.id} - захотел прикупить токены")
         answer, reply_markup = await get_menu_content(
             session,
-            level=callback_data.level
+            level=callback_data.level,
+            telegram_id=call.from_user.id
         )
 
         await call.message.edit_text(text=str(answer), reply_markup=reply_markup)
@@ -408,3 +409,6 @@ async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMC
         answer = answer + f"Нет заказов"
 
     await msg.answer(text=answer)
+
+
+# ################################## AMDIN_CONNECT ###################################
