@@ -24,7 +24,8 @@ from warpcast import api
 load_dotenv(find_dotenv())
 admins = [
     os.getenv('ADMIN_ID1'),
-    os.getenv('ADMIN_ID2')
+    os.getenv('ADMIN_ID2'),
+    os.getenv('ADMIN_ID3')
 ]
 user_private_router = Router()
 
