@@ -6,9 +6,15 @@ from errors.InsufficientFundsException import InsufficientFundsException
 
 
 async def orm_add_user(session: AsyncSession, msg: Message):
+    try:
+        inviter = msg.text.split('ref', 1)[1].strip()
+    except:
+        inviter = ''
+
     obj = User(
         telegram_id=msg.from_user.id,
         username=msg.from_user.username,
+        inviter=inviter
     )
     session.add(obj)
     await session.commit()

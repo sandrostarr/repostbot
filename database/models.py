@@ -16,6 +16,7 @@ class User(Base):
     fid: Mapped[int] = mapped_column(nullable=True, unique=True)
     balance: Mapped[int] = mapped_column(nullable=True, default=100)
     freeze_balance: Mapped[int] = mapped_column(nullable=True, default=0)
+    inviter: Mapped[str] = mapped_column(nullable=True, default='')
 
 
 class Task(Base):
