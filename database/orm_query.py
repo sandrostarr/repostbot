@@ -59,7 +59,7 @@ async def orm_top_up_user_balance(session: AsyncSession, msg: Message, balance_c
     await session.commit()
 
 
-async def orm_top_up_user_balance_tg_ig(session: AsyncSession, telegram_id: int, balance_change: int):
+async def orm_top_up_user_balance_by_tg_id(session: AsyncSession, telegram_id: int, balance_change: int):
     user = await orm_get_user_by_tg_id(session=session, telegram_id=telegram_id)
     query = update(User).where(User.telegram_id == telegram_id).values(
         balance=user.balance + balance_change)
@@ -95,18 +95,16 @@ async def orm_write_off_user_balance(session: AsyncSession, msg: Message, balanc
     await session.commit()
 
 
-async def orm_write_off_user_freeze_balance(session: AsyncSession, fid: int, balance_change: int):
-    user = await orm_get_user(session=session, fid=fid)
+async def orm_write_off_user_freeze_balance(session: AsyncSession, telegram_id: int, balance_change: int):
+    user = await orm_get_user_by_tg_id(session=session, telegram_id=telegram_id)
 
     if user.freeze_balance < balance_change:
         raise InsufficientFundsException
 
-    query = update(User).where(User.fid == fid).values(
+    query = update(User).where(User.telegram_id == telegram_id).values(
         freeze_balance=user.freeze_balance - balance_change)
     await session.execute(query)
     await session.commit()
-
-
 
 
 # TODO можно разделить метод на 2 (получение всех заданий и получение заданий с фильтрами на выполнение, user_id и т.д.)
@@ -122,7 +120,10 @@ async def orm_get_tasks(session: AsyncSession, task_type: str, user_id: int, not
             (Task.is_completed == False) &
             (
                     (TaskAction.id == None) |
-                    (TaskAction.is_verified == False)
+                    (
+                            (TaskAction.is_verified == False) &
+                            (TaskAction.is_completed == False)
+                    )
             )
         ))
     else:
@@ -156,9 +157,16 @@ async def orm_get_tasks_by_user_id(session: AsyncSession, user_id: int):
     return result.scalars().all()
 
 
+async def orm_get_tasks_by_id(session: AsyncSession, task_ids: list):
+    query = select(Task).where(Task.id.in_(task_ids))
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
 async def orm_add_task(
         session: AsyncSession,
         user_id: int,
+        telegram_id: int,
         creator_fid: int,
         task_type: str,
         url: str,
@@ -168,6 +176,7 @@ async def orm_add_task(
 ):
     obj = Task(
         user_id=user_id,
+        telegram_id=telegram_id,
         creator_fid=creator_fid,
         type=task_type,
         url=url,
@@ -179,7 +188,7 @@ async def orm_add_task(
     await session.commit()
 
 
-async def increase_task_actions_completed_count(session: AsyncSession, task: Task):
+async def orm_increase_task_actions_completed_count(session: AsyncSession, task: Task):
     actions_completed = task.actions_completed + 1
     task.actions_completed = actions_completed
 
@@ -190,7 +199,7 @@ async def increase_task_actions_completed_count(session: AsyncSession, task: Tas
     await session.commit()
 
 
-async def decrease_task_actions_completed_count(session: AsyncSession, task: Task):
+async def orm_decrease_task_actions_completed_count(session: AsyncSession, task: Task):
     actions_completed = task.actions_completed - 1
     task.actions_completed = actions_completed
 
@@ -203,11 +212,12 @@ async def decrease_task_actions_completed_count(session: AsyncSession, task: Tas
     await session.commit()
 
 
-
-async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int):
+async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int, telegram_id: int, user_fid: int = None):
     obj = TaskAction(
         task_id=task_id,
         user_id=user_id,
+        telegram_id=telegram_id,
+        user_fid=user_fid,
         is_completed=True,
     )
     session.add(obj)
@@ -224,8 +234,23 @@ async def orm_get_task_action(session: AsyncSession, user_id: int, task_id: int)
     return result.scalar()
 
 
+async def orm_get_task_actions_for_verification(session: AsyncSession):
+    query = select(TaskAction).where(
+        (TaskAction.is_verified == False) &
+        (TaskAction.is_completed == True)
+    )
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
 async def orm_verify_task_action(session: AsyncSession, task_action: TaskAction):
     task_action.is_verified = True
+    session.add(task_action)
+    await session.commit()
+
+
+async def orm_set_complete_task_action(session: AsyncSession, task_action: TaskAction):
+    task_action.is_completed = True
     session.add(task_action)
     await session.commit()
 

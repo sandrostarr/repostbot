@@ -79,7 +79,11 @@ async def top_up_get_approve(msg: Message, session: AsyncSession, state: FSMCont
     proof = msg.text
     answer = (f"Пополнил {telegram_id} на {top_up_sum} 🧲\n"
               f"PROOF: {proof}")
-    await q.orm_top_up_user_balance_tg_ig(session=session,telegram_id=int(telegram_id),balance_change=int(top_up_sum))
+    await q.orm_top_up_user_balance_by_tg_id(
+        session=session,
+        telegram_id=int(telegram_id),
+        balance_change=int(top_up_sum),
+    )
     await msg.answer(text=answer)
     await state.clear()
 

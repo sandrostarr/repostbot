@@ -7,10 +7,7 @@ import database.orm_query as q
 from errors import DBRequiresException
 from keyboard.inline import get_main_inline_kb, complete_task_kb, buy_token_kb
 from utils.functions import get_action_earning
-from handlers.action_checker import check_like_existence, check_recast_existence, check_follow_existence
 
-
-import keyboard.inline as ikb
 
 # основное меню для заданий
 async def task_menu(session, level):
@@ -36,11 +33,22 @@ async def task_complete(
 
         task_action = await q.orm_get_task_action(session=session, user_id=user.id, task_id=task.id)
         if task_action is None:
-            task_action = await q.orm_add_task_action(session=session, user_id=user.id, task_id=task.id)
+            await q.orm_add_task_action(
+                session=session,
+                user_id=user.id,
+                task_id=task.id,
+                telegram_id=user.telegram_id,
+                user_fid=user.fid,
+            )
         try:
-            await q.orm_top_up_user_freeze_balance_by_user_id(session=session,user_id=user.id, balance_change=action_earning)
-            await q.orm_verify_task_action(session=session, task_action=task_action)
-            await q.increase_task_actions_completed_count(session=session, task=task)
+            await q.orm_top_up_user_freeze_balance_by_user_id(
+                session=session,
+                user_id=user.id,
+                balance_change=action_earning,
+            )
+            await q.orm_increase_task_actions_completed_count(session=session, task=task)
+            if task_action.is_completed is False:
+                await q.orm_set_complete_task_action(session=session, task_action=task_action)
         except DBRequiresException as e:
             await bot.send_message(chat_id='176536188', text=f"Проблема с BD {e}")
             logging.warning(e)
