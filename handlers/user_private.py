@@ -21,8 +21,6 @@ from handlers.menu_process import get_menu_content
 from utils.functions import is_number, get_action_price, get_username_from_url
 from warpcast import api
 
-
-
 load_dotenv(find_dotenv())
 admins = [
     os.getenv('ADMIN_ID1'),
@@ -36,13 +34,13 @@ user_private_router = Router()
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Запущен бот или перезагружен")
     await state.clear()
-    #админ панель
+    # админ панель
     if str(msg.from_user.id) in admins:
-       answer = (f"Что надо хозяин?")
-       await msg.answer(text=answer, reply_markup=rkb.create_kb("Пополнить USER",
-                                                                "Заказать накрутку",
-                                                                "Посчитать токены",
-                                                                sizes=(1,1)))
+        answer = f"Что надо хозяин?"
+        await msg.answer(text=answer, reply_markup=rkb.create_kb("Пополнить USER",
+                                                                 "Заказать накрутку",
+                                                                 "Посчитать токены",
+                                                                 sizes=(1, 1)))
     else:
         answer = (f"Хало, {msg.from_user.full_name}.\n\n"
                   "Прокачаем твой WARPCAST ???\n\n"
@@ -322,6 +320,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                         await q.orm_add_task(
                             session=session,
                             user_id=user.id,
+                            telegram_id=user.telegram_id,
                             creator_fid=creator_fid,
                             task_type=task_type,
                             url=task_url.replace("https://warpcast.com/", ""),
@@ -354,6 +353,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                     await q.orm_add_task(
                         session=session,
                         user_id=user.id,
+                        telegram_id=user.telegram_id,
                         creator_fid=creator_fid,
                         task_type=task_type,
                         url=task_url.replace("https://warpcast.com/", ""),
@@ -384,7 +384,6 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
         await msg.answer(text="Недостаточно 🧲")
 
 
-
 # ################################## TASK_LIST ###################################
 @user_private_router.message(F.text == "Мои заказы")
 async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMContext):
@@ -409,6 +408,5 @@ async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMC
         answer = answer + f"Нет заказов"
 
     await msg.answer(text=answer)
-
 
 # ################################## AMDIN_CONNECT ###################################
