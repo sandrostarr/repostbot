@@ -117,35 +117,34 @@ def get_followers(
 #исправил сразу проверяет есть ли лайк от пользователя или нет
 def get_cast_likers(
         cast_hash: str,
-        fid_task_creator: int,
-        fid_liker: int,
+        fid_task_creator: int | str,
+        fid_liker: int | str,
 
 ):
     try:
-        param = f"reactionById?fid={fid_liker}&reaction_type=1&target_fid={fid_task_creator}&target_hash={cast_hash}"
-        response = requests.get(warp_api_node + param)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
+        param = f"reactionsByFid?fid={fid_liker}&reaction_type=1"
+        while True:
+            response = requests.get(warp_api_node + param)
+            if response.status_code != 200:
+                logging.warning(f"200 - {response}")
+                return None
+
+            likers_json = response.json()
+
+            for message in likers_json['messages']:
+                if cast_hash == message['data']['reactionBody']['targetCastId']['hash']:
+                    fid = message['data']['reactionBody']['targetCastId']['fid']
+                    if str(fid) == str(fid_task_creator):
+                        return True
+
+            page_token = likers_json['nextPageToken']
+            print(f" page = {page_token}")
+            if not page_token:
+                break
+            param = f"reactionsByFid?fid={fid_liker}&reaction_type=1&pageSize=1000&pageToken={page_token}"
     except:
         return None
 
-    #cтарый код
-    # param = f"cast-likes?cursor={cursor}&castHash={cast_hash}&limit={limit}"
-    # try:
-    #     response = requests.get(warp_api + param)
-    #     likers = response.json()
-    #     likers_fids = [like['reactor']['fid'] for like in likers['result']['likes']]
-    #
-    #     try:
-    #         cursor = (likers['next']['cursor'])
-    #     except:
-    #         cursor = None
-    #
-    #     return likers_fids, cursor
-    # except:
-    #     return None
 
 
 #рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
@@ -156,25 +155,25 @@ def get_cast_recasters(
 
 ):
     try:
-        param = f"reactionById?fid={fid_recaster}&reaction_type=2&target_fid={fid_task_creator}&target_hash={cast_hash}"
-        response = requests.get(warp_api_node + param)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
+        param = f"reactionsByFid?fid={fid_recaster}&reaction_type=1"
+        while True:
+            response = requests.get(warp_api_node + param)
+            if response.status_code != 200:
+                logging.warning(f"200 - {response}")
+                return None
+
+            likers_json = response.json()
+
+            for message in likers_json['messages']:
+                if cast_hash == message['data']['reactionBody']['targetCastId']['hash']:
+                    fid = message['data']['reactionBody']['targetCastId']['fid']
+                    if str(fid) == str(fid_task_creator):
+                        return True
+
+            page_token = likers_json['nextPageToken']
+            print(f" page = {page_token}")
+            if not page_token:
+                break
+            param = f"reactionsByFid?fid={fid_recaster}&reaction_type=1&pageSize=1000&pageToken={page_token}"
     except:
         return None
-    #
-    # param = f"cast-recasters?cursor={cursor}&castHash={cast_hash}&limit={limit}"
-    # try:
-    #     response = requests.get(warp_api + param)
-    #     recasters = response.json()
-    #     recasters_fids = [user['fid'] for user in recasters['result']['users']]
-    #     try:
-    #         cursor = (recasters['next']['cursor'])
-    #     except:
-    #         cursor = None
-    #
-    #     return recasters_fids, cursor
-    # except:
-    #     return None
