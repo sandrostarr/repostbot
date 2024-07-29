@@ -4,7 +4,25 @@ import requests
 from requests.exceptions import Timeout, ConnectionError
 
 warp_api = "https://client.warpcast.com/v2/"
-warp_api_node = "http://84.247.186.17:2281/v1/"
+
+# warp_api_node = "http://84.247.186.17:2281/v1/"
+# warp_api_node_1 = "http://176.57.150.251:2281/v1/"
+
+nodes = {
+    "http://84.247.186.17:2281/v1/",
+    "http://176.57.150.251:2281/v1/"
+}
+
+
+def check_connection():
+    for warp_api_node in nodes:
+        try:
+            param = f"info?dbstats=1"
+            response = requests.get(warp_api_node + param)
+            if response.status_code == 200:
+                return warp_api_node
+        except:
+            logging.warning(f"200 - {response}")
 
 
 def get_fid_from_username(
@@ -14,7 +32,6 @@ def get_fid_from_username(
     try:
         response = requests.get(warp_api + param)
         fid = response.json()['result']['user']['fid']
-
         return fid
     except:
         return None
@@ -47,7 +64,7 @@ def get_casts_from_user(
 
         param = f"castsByFid?fid={fid}&pageSize=1000"
         hash_list = []
-
+        warp_api_node = check_connection()
         while True:
             response = requests.get(warp_api_node + param)
             if response.status_code != 200:
@@ -92,7 +109,7 @@ def get_followers(
 
     param = f"linksByTargetFid?target_fid={creator_fid}"
     followers_ids = []
-
+    warp_api_node = check_connection()
     while True:
         response = requests.get(warp_api_node + param)
         if response.status_code != 200:
@@ -121,6 +138,7 @@ def get_cast_likers(
         fid_liker: int | str,
 
 ):
+    warp_api_node = check_connection()
     try:
         param = f"reactionsByFid?fid={fid_liker}&reaction_type=1"
         while True:
@@ -128,17 +146,13 @@ def get_cast_likers(
             if response.status_code != 200:
                 logging.warning(f"200 - {response}")
                 return None
-
             likers_json = response.json()
-
             for message in likers_json['messages']:
                 if cast_hash == message['data']['reactionBody']['targetCastId']['hash']:
                     fid = message['data']['reactionBody']['targetCastId']['fid']
                     if str(fid) == str(fid_task_creator):
                         return True
-
             page_token = likers_json['nextPageToken']
-            print(f" page = {page_token}")
             if not page_token:
                 break
             param = f"reactionsByFid?fid={fid_liker}&reaction_type=1&pageSize=1000&pageToken={page_token}"
@@ -146,7 +160,8 @@ def get_cast_likers(
         return None
 
 
-
+a = get_cast_likers(cast_hash='0xf2fb9ef747997943f162da6547664a408193f3e5', fid_task_creator=5650, fid_liker=237532)
+print(a)
 #рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
 def get_cast_recasters(
         cast_hash: str,
@@ -154,8 +169,9 @@ def get_cast_recasters(
         fid_recaster: int,
 
 ):
+    warp_api_node = check_connection()
     try:
-        param = f"reactionsByFid?fid={fid_recaster}&reaction_type=1"
+        param = f"reactionsByFid?fid={fid_recaster}&reaction_type=2"
         while True:
             response = requests.get(warp_api_node + param)
             if response.status_code != 200:
@@ -174,6 +190,6 @@ def get_cast_recasters(
             print(f" page = {page_token}")
             if not page_token:
                 break
-            param = f"reactionsByFid?fid={fid_recaster}&reaction_type=1&pageSize=1000&pageToken={page_token}"
+            param = f"reactionsByFid?fid={fid_recaster}&reaction_type=2&pageSize=1000&pageToken={page_token}"
     except:
         return None

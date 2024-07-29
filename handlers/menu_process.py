@@ -50,7 +50,6 @@ async def task_complete(
             if task_action.is_completed is False:
                 await q.orm_set_complete_task_action(session=session, task_action=task_action)
         except DBRequiresException as e:
-            await bot.send_message(chat_id='176536188', text=f"Проблема с BD {e}")
             logging.warning(e)
 
     kb = complete_task_kb(
@@ -73,13 +72,8 @@ async def buy_token(
         level: int,
         telegram_id: int = 0
 ):
-    # await bot.send_message(chat_id=176536188,
-    #                        text=f"user - хочет купить",
-    #                        reply_markup=ikb.create_callback_ikb(btns={
-    #                             " ответить: ": f'talk{telegram_id}'
-    #                        }
-    # ))
-    answer = f"Только в ручном режиме, напиши @username"
+
+    answer = f"Только в ручном режиме, напиши @warp_booster"
     # answer = f"не беси так и надо"
     kb = buy_token_kb(
         level=level,
