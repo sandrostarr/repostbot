@@ -32,6 +32,7 @@ async def task_complete(
         action_earning = get_action_earning(task.type)
 
         task_action = await q.orm_get_task_action(session=session, user_id=user.id, task_id=task.id)
+
         if task_action is None:
             await q.orm_add_task_action(
                 session=session,
@@ -47,7 +48,7 @@ async def task_complete(
                 balance_change=action_earning,
             )
             await q.orm_increase_task_actions_completed_count(session=session, task=task)
-            if task_action.is_completed is False:
+            if task_action is None or task_action.is_completed is False:
                 await q.orm_set_complete_task_action(session=session, task_action=task_action)
         except DBRequiresException as e:
             logging.warning(e)

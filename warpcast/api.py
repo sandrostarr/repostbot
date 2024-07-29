@@ -160,8 +160,6 @@ def get_cast_likers(
         return None
 
 
-a = get_cast_likers(cast_hash='0xf2fb9ef747997943f162da6547664a408193f3e5', fid_task_creator=5650, fid_liker=237532)
-print(a)
 #рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
 def get_cast_recasters(
         cast_hash: str,
