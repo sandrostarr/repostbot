@@ -218,7 +218,8 @@ async def orm_decrease_task_actions_completed_count(session: AsyncSession, task:
     await session.commit()
 
 
-async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int, telegram_id: int, user_fid: int = None):
+async def orm_add_task_action(session: AsyncSession, user_id: int, task_id: int, telegram_id: int,
+                              user_fid: int = None):
     obj = TaskAction(
         task_id=task_id,
         user_id=user_id,
@@ -265,4 +266,3 @@ async def orm_remove_complete_task_action(session: AsyncSession, task_action: Ta
     task_action.is_completed = False
     session.add(task_action)
     await session.commit()
-

@@ -22,11 +22,6 @@ from bot_creator import bot
 # Ограничение запросов для разгрузки скрипта
 ALLOWED_UPDATES = ["message", "edited_message", "callback_query"]
 
-# bot = Bot(token=os.getenv('BOT_TOKEN'),
-#           default=DefaultBotProperties(
-#               parse_mode=ParseMode.HTML
-#           )
-#           )
 dp = Dispatcher()
 
 dp.include_routers(user_private_router,
