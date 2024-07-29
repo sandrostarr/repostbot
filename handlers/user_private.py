@@ -15,7 +15,7 @@ import logging
 
 from errors.InsufficientFundsException import InsufficientFundsException
 from errors.DBRequiresException import DBRequiresException
-from utils.functions import is_hex_string, get_t_type, get_answer_t
+from utils.functions import is_hex_string, get_t_type, get_answer_t, get_hello
 from assets.FSMClass import AddFid, CreateTask
 from handlers.menu_process import get_menu_content
 from utils.functions import is_number, get_action_price, get_username_from_url
@@ -35,7 +35,7 @@ user_private_router = Router()
 async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     logging.info(f"{msg.from_user.id} - Запущен бот или перезагружен")
     await state.clear()
-    # админ панель
+    await msg.delete()
     if str(msg.from_user.id) in admins:
         answer = f"Что надо хозяин?"
         await msg.answer(text=answer, reply_markup=rkb.create_kb("Пополнить USER",
@@ -43,10 +43,9 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
                                                                  "Посчитать токены",
                                                                  sizes=(1, 1)))
     else:
-        answer = (f"Хало, {msg.from_user.full_name}.\n\n"
+        answer = (f"{get_hello()}, {msg.from_user.full_name}.\n\n"
                   "Прокачаем твой WARPCAST ???\n\n"
                   "LFG!!!")
-        await msg.delete()
         try:
             user = await q.orm_get_user(session=session, msg=msg)
             logging.info(f"{msg.from_user.id} - Уже зареган")
@@ -80,8 +79,8 @@ async def faq_cmd(msg: Message, state: FSMContext):
 
     table_approve = """
     | Задание | Выполнение |
-    |  Like   |     1      |
-    |  Recast |     2      |
+    |  Like   |     3      |
+    |  Recast |     3      |
     |  Follow |     3      | 
     """
 
@@ -90,7 +89,7 @@ async def faq_cmd(msg: Message, state: FSMContext):
               f"2. Стоимость заданий:\n"
               f"<pre>{table_cost}</pre>\n\n"
               f"3. Минимальный заказ каждой услуги от 5\n\n"
-              f"4. Время за которое начисляются 🧲 (мин):\n"
+              f"4. Время за которое начисляются 🧲 от (мин):\n"
               f"<pre>{table_approve}</pre>\n\n"
               f"5. В случае если вы выполнили задание и в течение 72 часов отменили его, вводится система штрафов.\n\n"
               f"6. Нажав кнопку выполнил, но не выполнили задание, не будут начислены 🧲, штрафы не предусмотрены.\n\n"
@@ -107,7 +106,7 @@ async def show_profile_data(msg: Message, session: AsyncSession, state: FSMConte
     await state.clear()
     user = await q.orm_get_user(session=session, msg=msg)
 
-    answer = (f"Hola {msg.from_user.full_name}\n\n"
+    answer = (f"{get_hello()} {msg.from_user.full_name}\n\n"
               f"FID: {user.fid}\n\n"
               f"Баланс: {user.balance} 🧲\n"
               f"🥶: {user.freeze_balance} 🧲")
@@ -196,9 +195,6 @@ async def task_complete_page(call: CallbackQuery, callback_data: ikb.MenuEarnCal
         await call.answer()
 
     elif callback_data.task_type is not None and tasks:
-        # for task in tasks:
-        #     print(Fore.WHITE + str(task.id) + ' ' + str(task.price) + ' ' + task.url)
-
         page = callback_data.page
         if page >= len(tasks):
             task = tasks[0]
@@ -409,5 +405,3 @@ async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMC
         answer = answer + f"Нет заказов"
 
     await msg.answer(text=answer)
-
-# ################################## AMDIN_CONNECT ###################################

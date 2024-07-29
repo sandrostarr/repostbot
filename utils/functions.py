@@ -1,3 +1,5 @@
+import random
+
 import requests
 import re
 
@@ -97,3 +99,28 @@ def summ_result(
         return result
     else:
         return 0.1
+
+
+def get_hello():
+    data = [
+        "Hello",
+        "Hola",
+        "Bonjour",
+        "Hallo",
+        "Ciao",
+        "Olá",
+        "Привет",
+        "你好 (Nǐ hǎo)",
+        "こんにちは (Konnichiwa)",
+        "안녕하세요 (Annyeong haseyo)",
+        "مرحبا (Marhaban)",
+        "Γειά σας (Geiá sas)",
+        "Merhaba",
+        "Hej",
+        "Hei",
+        "Ahoj",
+        "Cześć",
+        "Szia"
+    ]
+
+    return data[random.randint(0,len(data))]

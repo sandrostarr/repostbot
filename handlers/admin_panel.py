@@ -11,7 +11,6 @@ from assets.FSMClass import AdminTopUp, calcTokens
 
 from utils.functions import summ_result
 
-from bot_creator import bot
 
 admin_route = Router()
 
@@ -43,7 +42,6 @@ async def top_up_get_id(msg: Message, session: AsyncSession, state: FSMContext):
             answer = "такой не найден юзер"
             await msg.answer(text=answer)
 
-    #TODO: сделать проверку в БД по username
     elif msg.text.startswith("@"):
         username = msg.text.strip('@')
         try:
@@ -118,9 +116,10 @@ async def calc_summ_get_curr(call: CallbackQuery, state: FSMContext):
     logging.info(f"{call.from_user.id} - get currency")
     data = await state.get_data()
     value = data["VALUE"]
-    sum = summ_result(tokens_value=value, currency=call.data)
 
-    answer = (f"{value} 🧲 = {sum} {call.data}\n"
+    result = summ_result(tokens_value=value, currency=call.data)
+
+    answer = (f"{value} 🧲 = {result} {call.data}\n"
               f"Адрес для отправки: <i>0x000000000000000000000000000000000</i>")
 
     await call.message.edit_text(text=answer)
