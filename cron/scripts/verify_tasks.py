@@ -13,20 +13,6 @@ from warpcast import api
 from database import orm_query as q
 
 
-"""
-task_data = {
-        'Task.type': "follow",
-        'Task.user_id': 2342342,  # "user_id"
-        'Task.creator_fid': "creator_fid",
-        'Task.cast_hash': "0xHEX",
-        'Task.actions_completed': "20",
-        'TaskAction.user_fid': 3423,  # "user_fid"
-
-    }
-    data = [task_data, task_data]
-"""
-
-
 async def process_task_action(
         session: AsyncSession,
         task_action: TaskAction,
@@ -91,5 +77,6 @@ async def main():
         ordered_tasks[task.id] = task
 
     await process_tasks(session=session, task_actions=task_actions, tasks=ordered_tasks)
+
 
 asyncio.run(main())
