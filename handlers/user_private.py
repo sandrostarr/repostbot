@@ -6,7 +6,6 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
-from colorama import Fore
 
 import keyboard.reply as rkb
 import keyboard.inline as ikb
