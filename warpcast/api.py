@@ -107,28 +107,18 @@ def get_followers(
             logging.warning("get_fid_from_username - не работает")
             return None
 
-    param = f"linksByTargetFid?target_fid={creator_fid}"
-    followers_ids = []
+    param = f"linkById?fid={target_fid}&target_fid={creator_fid}&link_type=follow"
+
     warp_api_node = check_connection()
-    while True:
-        response = requests.get(warp_api_node + param)
-        if response.status_code != 200:
-            logging.warning(f"200 - {response}")
-            return None
 
-        followers = response.json()
-        followers_ids.extend(message['data']['fid'] for message in followers['messages'])
+    response = requests.get(warp_api_node + param)
+    if response.status_code != 200:
+        logging.warning(f"{response}")
+        return False
+    elif response.status_code == 200:
+        return True
 
-        if target_fid is not None:
-            if target_fid in followers_ids:
-                return True
-
-        page_token = followers['nextPageToken']
-        if not page_token:
-            break
-        param = f"linksByTargetFid?target_fid={creator_fid}&pageSize=1000&pageToken={page_token}"
-    return followers_ids
-
+# get_followers(creator_fid=5650, target_fid=655208)
 
 
 #исправил сразу проверяет есть ли лайк от пользователя или нет
