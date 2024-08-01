@@ -89,7 +89,7 @@ def get_casts_from_user(
         logging.warning("get_casts_from_user - не работает")
         return None
 
-
+# print(get_casts_from_user(username="vitalik.eth", hash_prefix='0x8c4d6ebf'))
 # print(get_casts_from_user("0x0nion"))
 # print(get_casts_from_user(username="kevinmfer",hash_prefix='0x2dea8f8'))
 
@@ -129,26 +129,20 @@ def get_cast_likers(
 
 ):
     warp_api_node = check_connection()
-    try:
-        param = f"reactionsByFid?fid={fid_liker}&reaction_type=1"
-        while True:
-            response = requests.get(warp_api_node + param)
-            if response.status_code != 200:
-                logging.warning(f"200 - {response}")
-                return None
-            likers_json = response.json()
-            for message in likers_json['messages']:
-                if cast_hash == message['data']['reactionBody']['targetCastId']['hash']:
-                    fid = message['data']['reactionBody']['targetCastId']['fid']
-                    if str(fid) == str(fid_task_creator):
-                        return True
-            page_token = likers_json['nextPageToken']
-            if not page_token:
-                break
-            param = f"reactionsByFid?fid={fid_liker}&reaction_type=1&pageSize=1000&pageToken={page_token}"
-    except:
-        return None
+    param = f"reactionById?fid={fid_liker}&reaction_type=1&target_fid={fid_task_creator}&target_hash={cast_hash}"
 
+    try:
+        response = requests.get(warp_api_node + param)
+        if response.status_code != 200:
+            logging.warning(f"{response}")
+            return False
+        elif response.status_code == 200:
+            return True
+    except:
+        return False
+
+
+get_cast_likers(cast_hash='0x8c4d6ebf23ddb1b1068b0ee5c720263b3b236b40', fid_liker=7237, fid_task_creator=5650)
 
 #рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
 def get_cast_recasters(
@@ -158,26 +152,14 @@ def get_cast_recasters(
 
 ):
     warp_api_node = check_connection()
+    param = f"reactionById?fid={fid_recaster}&reaction_type=2&target_fid={fid_task_creator}&target_hash={cast_hash}"
+
     try:
-        param = f"reactionsByFid?fid={fid_recaster}&reaction_type=2"
-        while True:
-            response = requests.get(warp_api_node + param)
-            if response.status_code != 200:
-                logging.warning(f"200 - {response}")
-                return None
-
-            likers_json = response.json()
-
-            for message in likers_json['messages']:
-                if cast_hash == message['data']['reactionBody']['targetCastId']['hash']:
-                    fid = message['data']['reactionBody']['targetCastId']['fid']
-                    if str(fid) == str(fid_task_creator):
-                        return True
-
-            page_token = likers_json['nextPageToken']
-            print(f" page = {page_token}")
-            if not page_token:
-                break
-            param = f"reactionsByFid?fid={fid_recaster}&reaction_type=2&pageSize=1000&pageToken={page_token}"
+        response = requests.get(warp_api_node + param)
+        if response.status_code != 200:
+            logging.warning(f"{response}")
+            return False
+        elif response.status_code == 200:
+            return True
     except:
-        return None
+        return False
