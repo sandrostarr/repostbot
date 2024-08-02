@@ -312,23 +312,33 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
             if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
                 cast_hash = api.get_casts_from_user(username=username, hash_prefix=hash_prefix)
                 if cast_hash:
-                    try:
-                        await q.orm_add_task(
+                    task = await q.orm_get_task_by_hash(session=session, cast_hash=cast_hash)
+                    if task:
+                        await q.update_task(
                             session=session,
-                            user_id=user.id,
-                            telegram_id=user.telegram_id,
-                            creator_fid=creator_fid,
-                            task_type=task_type,
-                            url=task_url.replace("https://warpcast.com/", ""),
                             cast_hash=cast_hash,
-                            price=task_price,
-                            actions_count=actions_amount,
-
+                            actions_count=actions_amount
                         )
-                        await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
-                    except DBRequiresException as e:
-                        await msg.answer(text='Задание не создалось попробуйте позже.')
-                        logging.warning(e)
+                    else:
+                        try:
+                            await q.orm_add_task(
+                                session=session,
+                                user_id=user.id,
+                                telegram_id=user.telegram_id,
+                                creator_fid=creator_fid,
+                                task_type=task_type,
+                                url=task_url.replace("https://warpcast.com/", ""),
+                                cast_hash=cast_hash,
+                                price=task_price,
+                                actions_count=actions_amount,
+
+                            )
+
+                        except DBRequiresException as e:
+                            await msg.answer(text='Задание не создалось попробуйте позже.')
+                            logging.warning(e)
+
+                    await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
 
                     answer = (f"Задание создано:\n\n"
                               f"Заказ: {task_type}\n"
@@ -345,21 +355,34 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                 logging.info(f"{msg.from_user.id} - указал некорректную ссылку")
         elif len(check_link) != 0:
             if task_type == "FOLLOW":
-                try:
-                    await q.orm_add_task(
+                task = await q.orm_get_task_by_link(
+                    session=session,
+                    url=check_link
+                )
+                if task:
+                    await q.update_task_follow(
                         session=session,
-                        user_id=user.id,
-                        telegram_id=user.telegram_id,
-                        creator_fid=creator_fid,
-                        task_type=task_type,
-                        url=task_url.replace("https://warpcast.com/", ""),
-                        price=task_price,
-                        actions_count=actions_amount,
+                        url=check_link,
+                        actions_count=actions_amount
                     )
-                    await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
-                except DBRequiresException as e:
-                    await msg.answer(text='Задание не создалось попробуйте позже.')
-                    logging.warning(e)
+                else:
+                    try:
+                        await q.orm_add_task(
+                            session=session,
+                            user_id=user.id,
+                            telegram_id=user.telegram_id,
+                            creator_fid=creator_fid,
+                            task_type=task_type,
+                            url=task_url.replace("https://warpcast.com/", ""),
+                            price=task_price,
+                            actions_count=actions_amount,
+                        )
+
+                    except DBRequiresException as e:
+                        await msg.answer(text='Задание не создалось попробуйте позже.')
+                        logging.warning(e)
+
+                await q.orm_write_off_user_balance(session=session, msg=msg, balance_change=task_price)
 
                 answer = (f"Задание создано:\n\n"
                           f"Заказ: {task_type}\n"
@@ -399,7 +422,7 @@ async def show_orders_task_list(msg: Message, session: AsyncSession, state: FSMC
                 ind = "🟡"
             else:
                 ind = "🔴"
-            answer = answer + f"{ind} {task.type} - <a href = '{task.url}'> ссылка </a>\n"
+            answer = answer + f"{ind} {task.type} - <a href = 'https://warpcast.com/{task.url}'> ссылка </a>\n"
     else:
         answer = answer + f"Нет заказов"
 

@@ -22,7 +22,7 @@ def check_connection():
             if response.status_code == 200:
                 return warp_api_node
         except:
-            logging.warning(f"200 - {response}")
+            logging.warning(f"200 - {response.json()}")
 
 
 def get_fid_from_username(
