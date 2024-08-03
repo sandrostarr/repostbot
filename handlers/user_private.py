@@ -312,13 +312,13 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
             if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
                 cast_hash = api.get_casts_from_user(username=username, hash_prefix=hash_prefix)
                 if cast_hash:
-                    task = await q.orm_get_task_by_hash(session=session, cast_hash=cast_hash)
+                    task = await q.orm_get_task_by_hash_and_type(
+                        session=session,
+                        cast_hash=cast_hash,
+                        task_type=task_type,
+                    )
                     if task:
-                        await q.update_task(
-                            session=session,
-                            cast_hash=cast_hash,
-                            actions_count=actions_amount
-                        )
+                        await q.update_task(session=session, task=task, actions_count=actions_amount)
                     else:
                         try:
                             await q.orm_add_task(
@@ -362,7 +362,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                 if task:
                     await q.update_task_follow(
                         session=session,
-                        url=check_link,
+                        task=task,
                         actions_count=actions_amount
                     )
                 else:
