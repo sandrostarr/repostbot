@@ -12,3 +12,9 @@ Installing all dependencies: \
 `pip install -r requirements.txt`
 
 Copying .env.dist file to .env and fill variables
+
+
+### Cron
+ 
+Верификация выполненных заданий, запускается каждые 3 минуты
+`*/3 * * * * /root/repostbot/venv/bin/python3 /root/repostbot/verify_tasks.py`

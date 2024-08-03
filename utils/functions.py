@@ -4,7 +4,7 @@ import requests
 import re
 
 
-def is_number(string):
+def is_number(string) -> bool:
     try:
         int(string)
         return True
@@ -23,12 +23,11 @@ def get_action_price(action_type: str):
 
 def get_answer_t(task_type: str):
     answers_ts = {
-        'LIKE': ['пост','https://warpcast.com/vitalik.eth/0xf2fb9ef7'],
-        'RECAST': ['пост','https://warpcast.com/vitalik.eth/0xf2fb9ef7'],
-        'FOLLOW': ['профиль','https://warpcast.com/vitalik.eth'],
+        'LIKE': ['пост', 'https://warpcast.com/vitalik.eth/0xf2fb9ef7'],
+        'RECAST': ['пост', 'https://warpcast.com/vitalik.eth/0xf2fb9ef7'],
+        'FOLLOW': ['профиль', 'https://warpcast.com/vitalik.eth'],
     }
     return answers_ts[task_type]
-
 
 
 def get_t_type(task_type: str):
@@ -39,6 +38,7 @@ def get_t_type(task_type: str):
     }
     return task_types[task_type]
 
+
 def get_action_earning(action_type: str):
     actions_earnings = {
         'LIKE': 1,
@@ -48,9 +48,9 @@ def get_action_earning(action_type: str):
     return actions_earnings[action_type]
 
 
-def check_cast_from_user(casts, startHash):
+def check_cast_from_user(casts, start_hash):
     for value in casts:
-        if value.startswith(startHash):
+        if value.startswith(start_hash):
             return True, value
     return False
 
@@ -72,7 +72,7 @@ def is_hex_string(s):
     return bool(hex_pattern.match(s))
 
 
-# рассчет сколько заплатить должны токенов
+# расчёт сколько заплатить должны токенов
 def get_token_price(symbol):
     url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
     response = requests.get(url)
@@ -84,21 +84,21 @@ def summ_result(
         tokens_value: float,
         currency: str = "USDT"
 ) -> float:
-    TOKEN_PRICE = 0.1
+    token_price = 0.1
 
     if currency == "USDT":
-        result = tokens_value * TOKEN_PRICE
+        result = tokens_value * token_price
         return result
     elif currency == "ETH":
         eth_price = float(get_token_price("ETHUSDT"))
-        result = tokens_value * TOKEN_PRICE / eth_price
+        result = tokens_value * token_price / eth_price
         return result
     elif currency == "MATIC":
         matic_price = float(get_token_price("MATICUSDT"))
-        result = tokens_value * TOKEN_PRICE / matic_price
+        result = tokens_value * token_price / matic_price
         return result
     else:
-        return 0.1
+        return token_price
 
 
 def get_hello():
@@ -123,4 +123,4 @@ def get_hello():
         "Szia"
     ]
 
-    return data[random.randint(0,len(data))]
+    return data[random.randint(0, len(data))]
