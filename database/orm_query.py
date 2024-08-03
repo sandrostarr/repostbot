@@ -177,11 +177,10 @@ async def orm_add_task(
 
 async def update_task(
         session: AsyncSession,
-        cast_hash: str,
+        task: Task,
         actions_count: int,
 ):
-    task = await orm_get_task_by_hash(session=session,cast_hash=cast_hash)
-    query = update(Task).where(Task.cast_hash == cast_hash).values(
+    query = update(Task).where(Task.cast_hash == task.cast_hash).values(
         actions_count=task.actions_count + actions_count)
     await session.execute(query)
     await session.commit()
@@ -189,11 +188,10 @@ async def update_task(
 
 async def update_task_follow(
         session: AsyncSession,
-        url: str,
+        task: Task,
         actions_count: int,
 ):
-    task = await orm_get_task_by_link(session=session,url=url)
-    query = update(Task).where(Task.url == url).values(
+    query = update(Task).where(Task.url == task.url).values(
         actions_count=task.actions_count + actions_count)
     await session.execute(query)
     await session.commit()
@@ -273,13 +271,17 @@ async def orm_remove_complete_task_action(session: AsyncSession, task_action: Ta
     await session.commit()
 
 
-async def orm_get_task_by_hash(
+async def orm_get_task_by_hash_and_type(
         session: AsyncSession,
-        cast_hash: str
+        cast_hash: str,
+        task_type: str,
 ):
-    query = select(Task).where(Task.cast_hash == cast_hash)
+    query = select(Task).where(
+        (Task.cast_hash == cast_hash) &
+        (Task.type == task_type)
+    )
     result = await session.execute(query)
-    return result.scalars().all()
+    return result.scalar()
 
 
 async def orm_get_task_by_link(
@@ -288,5 +290,5 @@ async def orm_get_task_by_link(
 ):
     query = select(Task).where(Task.url == url)
     result = await session.execute(query)
-    return result.scalars().all()
+    return result.scalar()
 
