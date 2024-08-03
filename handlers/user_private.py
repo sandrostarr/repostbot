@@ -7,13 +7,12 @@ from aiogram.filters import CommandStart, Command
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import errors
 import keyboard.reply as rkb
 import keyboard.inline as ikb
 import database.orm_query as q
 import logging
 
-from errors.InsufficientFundsException import InsufficientFundsException
-from errors.DBRequiresException import DBRequiresException
 from utils.functions import is_hex_string, get_t_type, get_answer_t, get_hello
 from assets.FSMClass import AddFid, CreateTask
 from handlers.menu_process import get_menu_content
@@ -21,6 +20,7 @@ from utils.functions import is_number, get_action_price, get_username_from_url
 from warpcast import api
 
 load_dotenv(find_dotenv())
+
 admins = [
     os.getenv('ADMIN_ID1'),
     os.getenv('ADMIN_ID2'),
@@ -334,7 +334,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
 
                             )
 
-                        except DBRequiresException as e:
+                        except errors.DBRequiresException as e:
                             await msg.answer(text='Задание не создалось попробуйте позже.')
                             logging.warning(e)
 
@@ -378,7 +378,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                             actions_count=actions_amount,
                         )
 
-                    except DBRequiresException as e:
+                    except errors.DBRequiresException as e:
                         await msg.answer(text='Задание не создалось попробуйте позже.')
                         logging.warning(e)
 
@@ -399,7 +399,7 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
             await msg.answer(text="Некорректная ссылка")
             logging.info(f"{msg.from_user.id} - указал не корректную ссылку")
 
-    except InsufficientFundsException:
+    except errors.InsufficientFundsException:
         await msg.answer(text="Недостаточно 🧲")
 
 

@@ -121,7 +121,7 @@ def get_followers(
 # get_followers(creator_fid=5650, target_fid=655208)
 
 
-#исправил сразу проверяет есть ли лайк от пользователя или нет
+# исправил сразу проверяет есть ли лайк от пользователя или нет
 def get_cast_likers(
         cast_hash: str,
         fid_task_creator: int | str,
@@ -142,9 +142,10 @@ def get_cast_likers(
         return False
 
 
-get_cast_likers(cast_hash='0x8c4d6ebf23ddb1b1068b0ee5c720263b3b236b40', fid_liker=7237, fid_task_creator=5650)
+# get_cast_likers(cast_hash='0x8c4d6ebf23ddb1b1068b0ee5c720263b3b236b40', fid_liker=7237, fid_task_creator=5650)
 
-#рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
+
+# рекасты появляются почти сразу проверил создал пост и проверку в течении 1 минуты все работает
 def get_cast_recasters(
         cast_hash: str,
         fid_task_creator: int,

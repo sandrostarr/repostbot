@@ -1,5 +1,5 @@
 class DBRequiresException(Exception):
-    """Выкидывать при попытке списания баланса, когда его недостаточно"""
+    """Выкидывать при неудачной попытке записи в БД"""
 
     def __init__(self,message):
         super().__init__(message)

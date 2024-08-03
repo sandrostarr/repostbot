@@ -138,25 +138,6 @@ async def orm_get_tasks(session: AsyncSession, task_type: str, user_id: int, not
     return result.scalars().all()
 
 
-async def orm_get_all_tasks_not_complete(session: AsyncSession, not_completed: bool = False):
-    if not_completed:
-        query = (select(Task).join(
-            TaskAction,
-            (TaskAction.task_id == Task.id),
-            isouter=True,
-        ).where(
-            (Task.is_completed == False) &
-            (
-                    (TaskAction.id == None) |
-                    (TaskAction.is_verified == False)
-            )
-        ))
-    else:
-        query = select(Task)
-    result = await session.execute(query)
-    return result.scalars().all()
-
-
 async def orm_get_tasks_by_user_id(session: AsyncSession, user_id: int):
     query = select(Task).where(Task.user_id == user_id)
     result = await session.execute(query)
@@ -216,6 +197,7 @@ async def update_task_follow(
         actions_count=task.actions_count + actions_count)
     await session.execute(query)
     await session.commit()
+
 
 async def orm_increase_task_actions_completed_count(session: AsyncSession, task: Task):
     actions_completed = task.actions_completed + 1

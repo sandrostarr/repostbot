@@ -25,6 +25,7 @@ async def drop_db():
 
 async def get_session() -> AsyncSession:
     # TODO вот тут говнокод сделал, заебала эта сессия
+    # Для работы с sqlite использовать вот такой конфиг: 'sqlite+aiosqlite:///../../db.db'
     encapsulated_engine = create_async_engine(os.getenv('DB_URL'), echo=True)
 
     encapsulated_session_maker = async_sessionmaker(
