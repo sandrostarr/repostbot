@@ -2,7 +2,7 @@ import os
 
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.filters import CommandStart, Command
 from dotenv import load_dotenv, find_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,6 +44,8 @@ async def start_cmd(msg: Message, session: AsyncSession, state: FSMContext):
     else:
         answer = (f"{get_hello()}, {msg.from_user.full_name}.\n\n"
                   "Прокачаем твой WARPCAST ???\n\n"
+                  "Выполняй задания и зарабатывай 🧲\n"
+                  "Заказывай продвижение и получай лайки/рекасты/подписки от реальных пользователей\n\n"
                   "LFG!!!")
         try:
             user = await q.orm_get_user(session=session, msg=msg)
@@ -127,7 +129,9 @@ async def get_fid_data(call: CallbackQuery, state: FSMContext):
     logging.info(f"{call.from_user.id} - Добавляет FID")
     await state.set_state(AddFid.FID)
     answer = "Отправь свой WARPCAST FID"
-    await call.message.edit_text(answer)
+    photo = FSInputFile(f"img/where_fid.png")
+    await call.message.answer_photo(photo=photo, caption=answer)
+
 
 
 @user_private_router.message(AddFid.FID)
@@ -346,7 +350,14 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                               f"Стоимость: {task_price} 🧲\n"
                               f"Ссылка: {task_url}")
                     await state.clear()
-                    await msg.answer(text=answer)
+                    await msg.answer(text=answer,  reply_markup=rkb.create_kb("Заработать 🧲",
+                                                                 "Заказать накрутку",
+                                                                 "Профиль",
+                                                                 "Мои заказы",
+                                                                 placeholder="Жмяк кряк",
+                                                                 sizes=(2, 1)
+                                                                )
+                                     )
                 else:
                     await msg.answer(text="Не удалось найти пост.")
                     logging.info(f"{msg.from_user.id} - указал некорректную ссылку")
@@ -390,7 +401,14 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                           f"Стоимость: {task_price} 🧲\n"
                           f"Ссылка: {task_url}")
                 await state.clear()
-                await msg.answer(text=answer)
+                await msg.answer(text=answer, reply_markup=rkb.create_kb("Заработать 🧲",
+                                                                 "Заказать накрутку",
+                                                                 "Профиль",
+                                                                 "Мои заказы",
+                                                                 placeholder="Жмяк кряк",
+                                                                 sizes=(2, 1)
+                                                                )
+                                 )
             else:
                 await msg.answer(text="Некорректная ссылка")
                 logging.info(f"{msg.from_user.id} - указал не корректную ссылку")
