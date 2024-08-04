@@ -179,9 +179,12 @@ async def update_task(
         session: AsyncSession,
         task: Task,
         actions_count: int,
+        task_price: int,
 ):
     query = update(Task).where(Task.cast_hash == task.cast_hash).values(
-        actions_count=task.actions_count + actions_count)
+        actions_count=task.actions_count + actions_count,
+        price=task.price + task_price,
+    )
     await session.execute(query)
     await session.commit()
 
@@ -271,24 +274,30 @@ async def orm_remove_complete_task_action(session: AsyncSession, task_action: Ta
     await session.commit()
 
 
-async def orm_get_task_by_hash_and_type(
+async def orm_get_existing_task(
         session: AsyncSession,
+        telegram_id: int,
         cast_hash: str,
         task_type: str,
 ):
     query = select(Task).where(
         (Task.cast_hash == cast_hash) &
-        (Task.type == task_type)
+        (Task.type == task_type) &
+        (Task.telegram_id == telegram_id)
     )
     result = await session.execute(query)
     return result.scalar()
 
 
-async def orm_get_task_by_link(
+async def orm_get_existing_task_by_link(
         session: AsyncSession,
-        url: str
+        telegram_id: int,
+        url: str,
 ):
-    query = select(Task).where(Task.url == url)
+    query = select(Task).where(
+        (Task.url == url) &
+        (Task.telegram_id == telegram_id)
+    )
     result = await session.execute(query)
     return result.scalar()
 

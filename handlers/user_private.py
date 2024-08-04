@@ -312,13 +312,19 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
             if len(hash_prefix) == 10 and is_hex_string(hash_prefix) and task_type != "FOLLOW":
                 cast_hash = api.get_casts_from_user(username=username, hash_prefix=hash_prefix)
                 if cast_hash:
-                    task = await q.orm_get_task_by_hash_and_type(
+                    task = await q.orm_get_existing_task(
                         session=session,
+                        telegram_id=user.telegram_id,
                         cast_hash=cast_hash,
                         task_type=task_type,
                     )
                     if task:
-                        await q.update_task(session=session, task=task, actions_count=actions_amount)
+                        await q.update_task(
+                            session=session,
+                            task=task,
+                            actions_count=actions_amount,
+                            task_price=task_price,
+                        )
                     else:
                         try:
                             await q.orm_add_task(
@@ -355,9 +361,10 @@ async def get_link_to_task(msg: Message, state: FSMContext, session: AsyncSessio
                 logging.info(f"{msg.from_user.id} - указал некорректную ссылку")
         elif len(check_link) != 0:
             if task_type == "FOLLOW":
-                task = await q.orm_get_task_by_link(
+                task = await q.orm_get_existing_task_by_link(
                     session=session,
-                    url=check_link
+                    telegram_id=user.telegram_id,
+                    url=check_link,
                 )
                 if task:
                     await q.update_task_follow(
